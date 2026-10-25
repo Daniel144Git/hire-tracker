@@ -19,7 +19,8 @@ export const fleetCodeNotOnOrder: Check = (context) => {
           "HIGH",
           line.id,
           `Fleet code ${line.fleetCode} is not on any hire order: are we paying for an item that is not on site?`,
-          { billed: line.net },
+          // Nothing on our orders justifies the charge, so all of it is at stake.
+          { billed: line.net, expected: 0, difference: line.net },
         ),
       );
     } else if (line.linkProblem === "AMBIGUOUS_FLEET_CODE") {
