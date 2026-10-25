@@ -41,7 +41,12 @@ export const billedAfterOffHire: Check = (context) => {
             weeklyRate,
             qty: line.qty,
             period,
-            hire: { start: order.startDate, offHire: order.offHireDate },
+            // Cut the period at the off-hire date only: days billed before the start of hire
+            // are R2's part of the overcharge, so the two never count the same pounds.
+            hire: {
+              start: isBefore(period.from, order.startDate) ? period.from : order.startDate,
+              offHire: order.offHireDate,
+            },
             rules: context.rules,
           }).total;
     const difference = expected === null ? null : round2(line.net - expected);

@@ -34,7 +34,8 @@ export const billedBeforeStart: Check = (context) =>
             weeklyRate,
             qty: line.qty,
             period,
-            hire: { start: order.startDate, offHire: order.offHireDate ?? undefined },
+            // Cut the period at the start of hire only: days after off-hire are R1's part.
+            hire: { start: order.startDate },
             rules: context.rules,
           }).total;
 
