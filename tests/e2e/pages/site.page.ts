@@ -5,8 +5,12 @@ export class SitePage {
   readonly heading: Locator;
   readonly ordersTable: Locator;
   readonly newOrderForm: Locator;
+  readonly suspensionForm: Locator;
+  readonly suspensionsTable: Locator;
 
   constructor(private readonly page: Page) {
+    this.suspensionForm = page.getByRole("form", { name: "Record a suspension" });
+    this.suspensionsTable = page.getByRole("table", { name: "Hire suspensions" });
     this.heading = page.getByRole("heading", { level: 1 });
     this.ordersTable = page.getByRole("table", { name: "Hire orders on this site" });
     this.newOrderForm = page.getByRole("form", { name: "New hire order" });
@@ -44,6 +48,20 @@ export class SitePage {
     const form = this.page.getByRole("form", { name: `Record collection for ${jobNo}` });
     await form.getByLabel("Collection no").fill(collectionNo);
     await form.getByRole("button", { name: "Record collection" }).click();
+  }
+
+  async recordSuspension(suspension: {
+    from: string;
+    to: string;
+    freeDays: number;
+    note?: string;
+  }): Promise<void> {
+    const form = this.suspensionForm;
+    await form.getByLabel("From").fill(suspension.from);
+    await form.getByLabel("To", { exact: true }).fill(suspension.to);
+    await form.getByLabel("Free days credited").fill(String(suspension.freeDays));
+    if (suspension.note) await form.getByLabel("Note (optional)").fill(suspension.note);
+    await form.getByRole("button", { name: "Record suspension" }).click();
   }
 
   async createOrder(order: {
