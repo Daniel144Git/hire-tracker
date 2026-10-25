@@ -6,4 +6,22 @@ Built as a test-automation portfolio project: the application is real, the test 
 
 - `docs/BRIEF.md` — what the app does, the business rules, the test strategy and the phases.
 
+## Run locally
+
+Requires Node.js 20.9 or newer.
+
+```bash
+npm install
+npm run dev
+```
+
+Then open http://localhost:3000.
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Starts the development server |
+| `npm run build` | Builds the production app |
+| `npm run lint` | Runs ESLint |
+| `npm run typecheck` | Generates Next.js route types, then runs the TypeScript compiler |
+
 Status: Phase 0 (setup). All data in this repository is fictional.
