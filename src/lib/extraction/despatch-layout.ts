@@ -119,6 +119,10 @@ function readItem(
   const chargeType = chargeTypeOf(description, unit, isWorkshop);
   const net = signed(total, isCreditNote);
   const result: DraftLine = { description, qty, chargeType, net, vat: round2(net * vatRate) };
+  if (chargeType === "TRANSPORT" && dates.length > 0) {
+    // The day of the trip: two trips on different days are different charges (R17).
+    result.periodFrom = result.periodTo = dates[0];
+  }
   if (chargeType === "HIRE") {
     if (dates.length >= 2) [result.periodFrom, result.periodTo] = dates;
     if (duration) {

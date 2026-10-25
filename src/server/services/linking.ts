@@ -60,14 +60,17 @@ export async function resolveInvoiceSite(invoiceId: string): Promise<void> {
 }
 
 /**
- * Links again the invoice lines of a supplier that could not be linked, e.g. once the order
- * they belong to was entered, or an item's new fleet code recorded. Invoices whose lines
- * changed get their site resolved and their checks run again.
+ * Links again every invoice line of a supplier, e.g. once an order was entered or an item's
+ * new fleet code recorded. Not only the lines that could not be linked: a line linked to the
+ * only order that had its fleet code moves to the invoice's own order once that is entered
+ * (an item hired again on a new job). Linking is a pure function, so this is cheap, and the
+ * result does not depend on the order things were entered in. Invoices whose lines changed
+ * get their site resolved and their checks run again.
  */
 export async function relinkInvoices(supplierId: string): Promise<void> {
   const orders = await loadOrdersForLinking(supplierId);
   const lines = await db.invoiceLine.findMany({
-    where: { invoice: { supplierId }, linkProblem: { not: null } },
+    where: { invoice: { supplierId } },
     include: { invoice: { select: { id: true, orderRef: true, jobNo: true } } },
   });
 
