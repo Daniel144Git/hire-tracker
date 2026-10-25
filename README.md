@@ -43,4 +43,4 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
 
-Status: Phase 0 (setup). All data in this repository is fictional.
+Status: Phase 1 (charge calculator). The expected charge of a hire line and the damage waiver are calculated in `src/lib/charging`, built test-first. All data in this repository is fictional.

@@ -74,6 +74,14 @@ These rules were confirmed against real invoices (figures below are fictional). 
 - **Continuation** invoices are issued on the last day of each month for the whole calendar month (or from the delivery date in the first month). A **return** (off-hire) invoice covers from the 1st of the month to the off-hire date.
 - UK bank holidays: open question, most likely still charged as working days. Make it a supplier flag; test both.
 
+**Implementation decisions (Phase 1, `src/lib/charging`):**
+
+- Dates are plain `YYYY-MM-DD` strings and all day arithmetic is done in UTC, so the result does not depend on the machine's time zone or on daylight-saving changes.
+- The expected charge of a line only counts the days the item was on hire: the billing period is cut to start no earlier than the start of hire and to end no later than the off-hire date. Anything billed outside that window is what R1 and R2 report.
+- One-week minimum: it applies to the whole hire. When a hire shorter than `minChargeDays` working days ends inside a billing period, the missing days are added to that period, i.e. to the off-hire (return) invoice. Example: on hire Thu 30 Jul to Tue 4 Aug, July is billed 2 days and August 3 days, one week in total. To be confirmed against a real return invoice of a short hire.
+- Rounding: the line charge for one item is rounded once, `round2(weeks × rate + days × rate / 5)`, then multiplied by the quantity and rounded again. Damage waiver adds the qualifying hire lines first and rounds once. Rounding is half away from zero, so credits mirror charges.
+- Bank holidays are a supplier flag (`chargeBankHolidays`) with the list of dates passed in; both settings are tested.
+
 **Other charges on the same invoice:**
 
 - **Damage waiver**: a percentage (e.g. 10%) of the hire charges on that invoice, one line per invoice, rounded to the penny. Not applied to transport. It applies to most orders but not all (some plant categories have none), so it is a per-order flag `damageWaiverApplies`, defaulting to the supplier's setting.
