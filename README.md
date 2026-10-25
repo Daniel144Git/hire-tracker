@@ -8,7 +8,7 @@ Built as a test-automation portfolio project: the application is real, the test 
 
 ## Run locally
 
-Requires Node.js 20.9 or newer.
+Requires Node.js 24 (see `.nvmrc`; with nvm, run `nvm use`).
 
 ```bash
 npm install
@@ -23,5 +23,9 @@ Then open http://localhost:3000.
 | `npm run build`     | Builds the production app                                        |
 | `npm run lint`      | Runs ESLint                                                      |
 | `npm run typecheck` | Generates Next.js route types, then runs the TypeScript compiler |
+| `npm run format` | Formats all files with Prettier |
+| `npm run format:check` | Fails if any file is not formatted |
+| `npm test` | Runs the unit tests (Vitest) |
+| `npm run test:watch` | Runs the unit tests in watch mode |
 
 Status: Phase 0 (setup). All data in this repository is fictional.
