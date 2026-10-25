@@ -3,8 +3,8 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-16">
       <h1 className="text-3xl font-semibold">Hire Tracker</h1>
       <p className="text-lg">
-        Tracks equipment on hire for construction sites and checks every hire
-        invoice against what was actually on site.
+        Tracks equipment on hire for construction sites and checks every hire invoice against what
+        was actually on site.
       </p>
       <section aria-labelledby="checks-heading" className="flex flex-col gap-3">
         <h2 id="checks-heading" className="text-xl font-medium">
