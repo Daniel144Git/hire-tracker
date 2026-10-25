@@ -21,6 +21,7 @@ function toCheckInvoice(invoice: InvoiceRow): CheckInvoice {
     type: invoice.type,
     isCreditNote: invoice.isCreditNote,
     jobNo: invoice.jobNo,
+    orderRef: invoice.orderRef,
     lastInvoiceNo: invoice.lastInvoiceNo,
     net: fromPence(invoice.netPence),
     vat: fromPence(invoice.vatPence),
@@ -74,7 +75,10 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
         ...(invoice.jobNo ? [{ supplierJobNo: invoice.jobNo }] : []),
       ],
     },
-    include: { items: true, site: { select: { id: true, code: true } } },
+    include: {
+      items: { include: { codeChanges: { select: { oldCode: true } } } },
+      site: { select: { id: true, code: true } },
+    },
   });
   const [supplierItems, suspensions] = await Promise.all([
     db.hireItem.findMany({
@@ -104,6 +108,7 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
       description: item.description,
       fleetCode: item.fleetCode,
       weeklyRate: fromPence(item.weeklyRatePence),
+      previousFleetCodes: item.codeChanges.map((change) => change.oldCode),
     })),
   }));
 

@@ -49,6 +49,16 @@ export const fleetCodeNotOnOrder: Check = (context) => {
     }
   }
 
+  if (invoice.lines.some((line) => line.linkProblem === "UNKNOWN_ORDER_REF")) {
+    findings.push(
+      finding(
+        "R8",
+        "MEDIUM",
+        null,
+        `Our order number ${invoice.orderRef} is not on any hire order`,
+      ),
+    );
+  }
   if (invoice.lines.some((line) => line.linkProblem === "UNKNOWN_JOB_NO")) {
     findings.push(
       finding("R8", "MEDIUM", null, `Job number ${invoice.jobNo} is not on any hire order`),

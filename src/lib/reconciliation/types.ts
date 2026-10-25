@@ -51,6 +51,8 @@ export interface CheckInvoice {
   isCreditNote: boolean;
   /** Job number printed in the header: one hire order. */
   jobNo: string | null;
+  /** "Our ref" printed in the header: our own order number. */
+  orderRef: string | null;
   /** "Last invoice" printed on the invoice: the previous invoice of the same job. */
   lastInvoiceNo: string | null;
   net: number;
@@ -66,7 +68,14 @@ export interface CheckOrder {
   startDate: IsoDate;
   offHireDate: IsoDate | null;
   damageWaiverApplies: boolean;
-  items: { id: string; description: string; fleetCode: string | null; weeklyRate: number }[];
+  items: {
+    id: string;
+    description: string;
+    fleetCode: string | null;
+    weeklyRate: number;
+    /** Codes the item had before a recorded change (E-code swap). */
+    previousFleetCodes?: string[];
+  }[];
 }
 
 /** An item on any hire order of the supplier, for comparing rates across orders (R12). */
