@@ -266,3 +266,57 @@ VAT No. 000 000 000
                                                                                     TOTAL    £20.74
 `;
 }
+
+export interface StatementOptions {
+  accountNo?: string;
+  date?: string;
+  /** Rows as printed: [invoice date, job no, invoice no, customer ref, amount]. */
+  rows?: [string, string, string, string, number][];
+}
+
+const money = (value: number) =>
+  Math.abs(value).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * A supplier statement in the despatch supplier's layout: the invoices still open on the date,
+ * debits and credits (credits printed negative in the Credit column), a customer reference that
+ * can wrap onto the next row, a copy of each row on the right for the remittance, and the total.
+ * The default rows: two August invoices, a return and a credit note, total £1,355.28.
+ */
+export function despatchStatement(options: StatementOptions = {}): string {
+  const {
+    accountNo = "APX-000123",
+    date = "02/09/2026",
+    rows = [
+      ["31/07/2026", "170200345", "30390001", "Riverside", 665.28],
+      ["31/08/2026", "170200345", "30451207", "RIVERSIDE", 665.28],
+      ["02/09/2026", "170200400", "30451300", "Northgate Works Leeds", 56.4],
+      ["30/08/2026", "170200345", "30460001", "Riverside", -31.68],
+    ],
+  } = options;
+  const total = rows.reduce((sum, row) => sum + row[4], 0);
+  const body = rows.flatMap(([invoiceDate, jobNo, invoiceNo, ref, amount]) => {
+    // A long customer reference wraps: its last word goes on the row below.
+    const words = ref.split(" ");
+    const [first, rest] =
+      words.length > 2 ? [words.slice(0, -1).join(" "), words.at(-1)] : [ref, ""];
+    const left = ` ${invoiceDate}   ${jobNo.padEnd(11)}  ${invoiceNo.padEnd(12)}  ${first.padEnd(22)}`;
+    const debit = amount >= 0 ? money(amount).padStart(9) : "".padStart(9);
+    const credit = amount < 0 ? `-${money(amount)}`.padStart(10) : "".padStart(10);
+    const copy = `   ${invoiceDate}   ${invoiceNo.padEnd(12)}  ${debit}  ${credit}`;
+    const row = `${left}  ${debit}  ${credit}${copy}`;
+    return rest ? [row, `${"".padEnd(41)}${rest}`] : [row];
+  });
+  return `
+                                                              Group Statement         Account:   ${accountNo} BROOKFIELD BUILD LTD
+ Brookfield Build Ltd                                                                 Date:      ${date}
+ 1 Example Street                                             Account:    ${accountNo}
+ TT1 1AA                                                      Date:       ${date}
+ Date         Job No.      Invoice No.   Customer Ref                Debit      Credit   Date         Invoice No.       Debit      Credit
+${body.join("\n")}
+ Period Ending:                                                    Total                                            Total
+ 30/09/2026      0.00   31/07/2026   665.28                ${money(total).padStart(9)}                                           Cheque
+ 31/08/2026    690.00   30/06/2026     0.00
+ * = PART PAID Q = UNDER QUERY
+`;
+}
