@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractInvoice } from "@/lib/extraction/extract-invoice";
+import { groupIntoLines } from "@/lib/extraction/pdf-lines";
 import { readPdfText } from "@/server/pdf/read-pdf";
 import {
   contractInvoice,
@@ -20,8 +21,8 @@ describe("readPdfText", () => {
   });
 
   it("numbers the pages of a multi-page PDF", async () => {
-    const fragments = await readPdfText(await pdfOf("first page", "second page"));
-    expect(fragments.map(({ page, text }) => [page, text])).toEqual([
+    const lines = groupIntoLines(await readPdfText(await pdfOf("first page", "second page")));
+    expect(lines.map(({ page, text }) => [page, text])).toEqual([
       [1, "first page"],
       [2, "second page"],
     ]);

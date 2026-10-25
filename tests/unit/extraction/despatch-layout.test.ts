@@ -100,6 +100,22 @@ describe("despatch layout", () => {
     expect(result?.warnings).toEqual([]);
   });
 
+  it("reads a suspension credit under an item as a negative hire line for the same item", () => {
+    const document = despatchInvoice().replace(
+      "         Ecode: APX-SL-0042\n",
+      "         Ecode: APX-SL-0042\n" +
+        "         Free days  1wk Hire Suspension 10/08/26 to 14/08/26 (5 Days)per day        120.00-\n",
+    );
+    expect(read(document)?.invoice.lines[1]).toEqual({
+      description: "Free days 1wk Hire Suspension 10/08/26 to 14/08/26 (5 Days)per day",
+      fleetCode: "APX-SL-0042",
+      qty: 1,
+      chargeType: "HIRE",
+      net: -120,
+      vat: -24,
+    });
+  });
+
   it("reads a credit note as negative amounts and keeps the period as printed", () => {
     const result = read(despatchCreditNote());
     expect(result?.invoice).toEqual({

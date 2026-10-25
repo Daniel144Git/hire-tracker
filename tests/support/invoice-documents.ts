@@ -10,9 +10,11 @@ import type { TextFragment } from "@/lib/extraction/pdf-lines";
  * every company, number, address and amount below is made up.
  */
 
+// Small type, as on the suppliers' documents: a space between words (2.7pt) stays inside a
+// cell and two spaces (5.4pt) start a new column, like the 4-5pt column gaps they print.
 const LEFT_MARGIN = 20;
-const CHAR_WIDTH = 4.2; // Courier at 7pt: every character is 0.6em wide.
-const FONT_SIZE = 7;
+const FONT_SIZE = 4.5;
+const CHAR_WIDTH = FONT_SIZE * 0.6; // Courier: every character is 0.6em wide.
 const TOP = 800;
 const ROW_HEIGHT = 10;
 
@@ -131,7 +133,7 @@ export function despatchReturnInvoice(): string {
  Qty/Item                              From        To             /Days          Rate    Period       Total   VAT
    Despatch:  160001300 03/03/2026
    Delivery Address:   Brookfield Build Ltd
-                       Northgate Works
+                       Northgate Works,
                        Leeds  LS1 4AB
      Workshop Text:    03/03
  1 x Material lift 5m                  01/09/26    02/09/26       1 day          60.00   / week        12.00   S

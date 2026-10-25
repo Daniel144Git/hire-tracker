@@ -23,6 +23,13 @@ describe("extractInvoice", () => {
     ]);
   });
 
+  it("accepts VAT rounded once on the total, a penny or so from the sum of the lines", () => {
+    // The lines' VAT adds up to £105.13; 20% of the £525.64 net total is £105.128 = £105.13
+    // too, so move it by a penny: within half a penny per line, it is only rounding.
+    const document = contractInvoice().replace("£105.13", "£105.12");
+    expect(read(document)?.warnings).toEqual([]);
+  });
+
   it("warns about every header field it could not read, and leaves it out", () => {
     const document = despatchInvoice()
       .replace("Invoice No       : 30451207", "")
