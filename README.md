@@ -41,18 +41,24 @@ The API and E2E tests build the app and start their own production server on por
 
 All endpoints take and return JSON. Money is in pounds, dates are `YYYY-MM-DD`. Every error has the same shape: `{ "error": { "code", "message", "issues"? } }`.
 
-| Method and path                   | What it does                                        | Errors                        |
-| --------------------------------- | --------------------------------------------------- | ----------------------------- |
-| `GET /api/health`                 | Health check                                        |                               |
-| `GET, POST /api/suppliers`        | List or create suppliers and their charging profile | 400, 409 duplicate name       |
-| `GET, POST /api/sites`            | List or create sites                                | 400, 409 duplicate code       |
-| `GET, PATCH /api/sites/:id`       | Get or edit a site                                  | 400, 404, 409                 |
-| `GET /api/orders?siteId=&status=` | List hire orders, filtered by site and status       | 400                           |
-| `POST /api/orders`                | Create a hire order with its items                  | 400, 409 duplicate job number |
-| `GET, PATCH /api/orders/:id`      | Get an order, or change its trade or damage waiver  | 400, 404                      |
-| `POST /api/orders/:id/items`      | Add an item or accessory to an order                | 400, 404                      |
-| `POST /api/orders/:id/off-hire`   | Off-hire: date and optional collection number       | 400, 404, 409 not on hire     |
-| `POST /api/orders/:id/collection` | Record the collection of an off-hired order         | 400, 404, 409 not off-hired   |
+| Method and path                                | What it does                                                                                         | Errors                        |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `GET /api/health`                              | Health check                                                                                         |                               |
+| `GET, POST /api/suppliers`                     | List or create suppliers and their charging profile                                                  | 400, 409 duplicate name       |
+| `GET, POST /api/sites`                         | List or create sites                                                                                 | 400, 409 duplicate code       |
+| `GET, PATCH /api/sites/:id`                    | Get or edit a site                                                                                   | 400, 404, 409                 |
+| `GET /api/orders?siteId=&status=`              | List hire orders, filtered by site and status                                                        | 400                           |
+| `POST /api/orders`                             | Create a hire order with its items                                                                   | 400, 409 duplicate job number |
+| `GET, PATCH /api/orders/:id`                   | Get an order, or change its trade or damage waiver                                                   | 400, 404                      |
+| `POST /api/orders/:id/items`                   | Add an item or accessory to an order                                                                 | 400, 404                      |
+| `POST /api/orders/:id/off-hire`                | Off-hire: date and optional collection number                                                        | 400, 404, 409 not on hire     |
+| `POST /api/orders/:id/collection`              | Record the collection of an off-hired order                                                          | 400, 404, 409 not off-hired   |
+| `GET /api/invoices?supplierId=&jobNo=`         | List invoices with due dates, lines not linked and open findings                                     | 400                           |
+| `POST /api/invoices`                           | Record an invoice as printed; due date from the supplier's terms; lines linked to orders; checks run | 400, 409 duplicate number     |
+| `GET /api/invoices/:id`                        | Get an invoice with its lines, what each line is linked to, and its findings                         | 404                           |
+| `POST /api/invoices/:id/check`                 | Run the reconciliation checks again and return the findings                                          | 404                           |
+| `GET, POST /api/sites/:id/suspensions`         | List or record site suspensions (free days credited); re-checks the site's invoices                  | 400, 404                      |
+| `GET /api/reports/discrepancies?month=YYYY-MM` | The month's findings, totals and orders on hire with no invoice                                      | 400                           |
 
 ## Reconciliation checks
 
