@@ -79,6 +79,25 @@ describe("draftQueryEmail: a query to the supplier from the open findings", () =
     expect(email?.body).toContain("Please explain these charges, or send a credit note.");
   });
 
+  it("leaves out a job number we have no order for: that is about our records", () => {
+    const email = draftQueryEmail(supplier, [
+      {
+        number: "APX-1",
+        date: "2026-08-31",
+        findings: [
+          finding({
+            check: "R8",
+            severity: "MEDIUM",
+            linePosition: null,
+            message: "Job number J9 is not on any hire order",
+            difference: null,
+          }),
+        ],
+      },
+    ]);
+    expect(email).toBeNull();
+  });
+
   it("has nothing to send when no finding is open", () => {
     expect(
       draftQueryEmail(supplier, [

@@ -28,7 +28,7 @@ describe("R9: a damage, loss, repair or service charge with no event recorded on
         severity: "MEDIUM",
         invoiceLineId: "line-other",
         message:
-          "Guard rail damaged beyond repair charged at £85.00, but no service, repair, damage or loss is recorded on RVS in the 60 days before the invoice: ask the site team to confirm it",
+          "Guard rail damaged beyond repair charged at £85.00, but no service, repair, damage or loss is recorded on RVS in the 60 days before the invoice: ask for the damage report or the site's confirmation",
         billed: 85,
       }),
     ]);
@@ -72,10 +72,11 @@ describe("R9: a damage, loss, repair or service charge with no event recorded on
     expect(chargeWithoutEvent(ctx)).toEqual([]);
   });
 
-  it("says so when the site is not known", () => {
+  it("says so, as low, when the site is not known: that is our records' gap", () => {
     const unlinked = { ...damage, orderId: null };
     const ctx = context({ invoice: invoice({ lines: [unlinked] }) });
 
+    expect(chargeWithoutEvent(ctx)[0].severity).toBe("LOW");
     expect(chargeWithoutEvent(ctx)[0].message).toBe(
       "Guard rail damaged beyond repair charged at £85.00, but the site is not known, so no service, repair, damage or loss can be matched: link the invoice to a site",
     );

@@ -9,8 +9,11 @@ export class InvoicePage {
   readonly findingsSummary: Locator;
   /** Shown when the invoice's PDF was kept. */
   readonly pdfLink: Locator;
+  /** The query email to the supplier, drafted from the open findings. */
+  readonly queryEmail: Locator;
 
   constructor(private readonly page: Page) {
+    this.queryEmail = page.getByRole("group").filter({ hasText: "Draft a query email" });
     this.pdfLink = page.getByRole("link", { name: "Open the invoice PDF" });
     this.heading = page.getByRole("heading", { level: 1 });
     this.linesTable = page.getByRole("table", { name: "Invoice lines" });
