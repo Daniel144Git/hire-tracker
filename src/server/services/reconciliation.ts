@@ -20,6 +20,8 @@ function toCheckInvoice(invoice: InvoiceRow): CheckInvoice {
     date: invoice.date,
     type: invoice.type,
     isCreditNote: invoice.isCreditNote,
+    jobNo: invoice.jobNo,
+    lastInvoiceNo: invoice.lastInvoiceNo,
     net: fromPence(invoice.netPence),
     vat: fromPence(invoice.vatPence),
     gross: fromPence(invoice.grossPence),
@@ -36,6 +38,7 @@ function toCheckInvoice(invoice: InvoiceRow): CheckInvoice {
       vat: fromPence(line.vatPence),
       orderId: line.orderId,
       hireItemId: line.hireItemId,
+      linkProblem: line.linkProblem,
     })),
   };
 }
@@ -47,48 +50,106 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
     include: { ...invoiceForChecks, supplier: true },
   });
   if (!invoice) throw new NotFoundError("Invoice", invoiceId);
+  const { supplier } = invoice;
 
-  const orderIds = [
-    ...new Set(invoice.lines.map((line) => line.orderId).filter((id) => id !== null)),
-  ];
-  const [orders, otherInvoices] = await Promise.all([
-    db.hireOrder.findMany({ where: { id: { in: orderIds } }, include: { items: true } }),
-    db.invoice.findMany({
-      where: {
-        supplierId: invoice.supplierId,
-        id: { not: invoice.id },
-        lines: { some: { orderId: { in: orderIds } } },
+  const ownOrderIds = linkedOrderIds([invoice]);
+  // Related invoices: the same orders (credits, double billing) or the same job (the chain).
+  const otherInvoices = await db.invoice.findMany({
+    where: {
+      supplierId: supplier.id,
+      id: { not: invoice.id },
+      OR: [
+        { lines: { some: { orderId: { in: ownOrderIds } } } },
+        ...(invoice.jobNo ? [{ jobNo: invoice.jobNo }] : []),
+      ],
+    },
+    include: invoiceForChecks,
+  });
+
+  const orders = await db.hireOrder.findMany({
+    where: {
+      supplierId: supplier.id,
+      OR: [
+        { id: { in: linkedOrderIds([invoice, ...otherInvoices]) } },
+        ...(invoice.jobNo ? [{ supplierJobNo: invoice.jobNo }] : []),
+      ],
+    },
+    include: { items: true, site: { select: { id: true, code: true } } },
+  });
+  const [supplierItems, suspensions] = await Promise.all([
+    db.hireItem.findMany({
+      where: { order: { supplierId: supplier.id } },
+      select: {
+        orderId: true,
+        description: true,
+        weeklyRatePence: true,
+        order: { select: { supplierJobNo: true } },
       },
-      include: invoiceForChecks,
+    }),
+    db.suspension.findMany({
+      where: { siteId: { in: [...new Set(orders.map((order) => order.siteId))] } },
+      include: { site: { select: { code: true } } },
     }),
   ]);
 
   const checkOrders: CheckOrder[] = orders.map((order) => ({
     id: order.id,
     supplierJobNo: order.supplierJobNo,
+    site: order.site,
     startDate: order.startDate,
     offHireDate: order.offHireDate,
     damageWaiverApplies: order.damageWaiverApplies,
     items: order.items.map((item) => ({
       id: item.id,
+      description: item.description,
       fleetCode: item.fleetCode,
       weeklyRate: fromPence(item.weeklyRatePence),
     })),
   }));
 
-  const { supplier } = invoice;
   return {
     invoice: toCheckInvoice(invoice),
     orders: Object.fromEntries(checkOrders.map((order) => [order.id, order])),
     otherInvoices: otherInvoices.map(toCheckInvoice),
-    rules: {
-      chargeBankHolidays: supplier.chargeBankHolidays,
-      bankHolidays: ENGLAND_AND_WALES_BANK_HOLIDAYS,
-      minChargeDays: supplier.minChargeDays,
-      damageWaiverPct: supplier.damageWaiverPct,
-    },
+    supplierItems: supplierItems.map((item) => ({
+      orderId: item.orderId,
+      supplierJobNo: item.order.supplierJobNo,
+      description: item.description,
+      weeklyRate: fromPence(item.weeklyRatePence),
+    })),
+    suspensions: suspensions.map((suspension) => ({
+      siteId: suspension.siteId,
+      siteCode: suspension.site.code,
+      periodFrom: suspension.periodFrom,
+      periodTo: suspension.periodTo,
+      freeDays: suspension.freeDays,
+    })),
+    rules: chargingRulesOf(supplier),
     tolerance: DEFAULT_TOLERANCE,
     vatRate: STANDARD_VAT_RATE,
+  };
+}
+
+function linkedOrderIds(invoices: InvoiceRow[]): string[] {
+  return [
+    ...new Set(
+      invoices
+        .flatMap((invoice) => invoice.lines.map((line) => line.orderId))
+        .filter((id) => id !== null),
+    ),
+  ];
+}
+
+export function chargingRulesOf(supplier: {
+  chargeBankHolidays: boolean;
+  minChargeDays: number;
+  damageWaiverPct: number;
+}) {
+  return {
+    chargeBankHolidays: supplier.chargeBankHolidays,
+    bankHolidays: ENGLAND_AND_WALES_BANK_HOLIDAYS,
+    minChargeDays: supplier.minChargeDays,
+    damageWaiverPct: supplier.damageWaiverPct,
   };
 }
 
@@ -131,15 +192,25 @@ export async function checkInvoice(invoiceId: string): Promise<FindingDto[]> {
 }
 
 /**
- * Re-checks every invoice with lines on these orders, e.g. after an off-hire date is entered
- * (R1 depends on it) or after a credit note arrives (it can close an R1 finding).
+ * Re-checks the invoices related to a change: those with lines on these orders (an off-hire
+ * date, a credit note, a suspension) and those of the same job number (the invoice chain).
  */
-export async function recheckInvoicesForOrders(
-  orderIds: string[],
-  exceptInvoiceId?: string,
-): Promise<void> {
+export async function recheckRelatedInvoices(related: {
+  orderIds: string[];
+  jobNo?: string | null;
+  supplierId?: string;
+  exceptInvoiceId?: string;
+}): Promise<void> {
   const invoices = await db.invoice.findMany({
-    where: { id: { not: exceptInvoiceId }, lines: { some: { orderId: { in: orderIds } } } },
+    where: {
+      id: { not: related.exceptInvoiceId },
+      OR: [
+        { lines: { some: { orderId: { in: related.orderIds } } } },
+        ...(related.jobNo && related.supplierId
+          ? [{ jobNo: related.jobNo, supplierId: related.supplierId }]
+          : []),
+      ],
+    },
     select: { id: true },
   });
   for (const invoice of invoices) {

@@ -2,6 +2,7 @@ import { addDays, parseIsoDate, type IsoDate } from "@/lib/charging/iso-date";
 import { round2, toPence } from "@/lib/money";
 import type {
   CheckId,
+  CheckInvoice,
   CheckLine,
   CheckOrder,
   Finding,
