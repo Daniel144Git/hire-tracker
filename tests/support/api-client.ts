@@ -133,6 +133,13 @@ export class ApiClient {
     return this.post<Order>(`/api/orders/${orderId}/off-hire`, body, 200);
   }
 
+  async createSuspension(
+    siteId: string,
+    body: { periodFrom: string; periodTo: string; freeDays: number; note?: string },
+  ) {
+    return this.post<{ id: string }>(`/api/sites/${siteId}/suspensions`, body);
+  }
+
   async getInvoice(id: string): Promise<Invoice> {
     const response = await this.request.get(`/api/invoices/${id}`);
     expect(response.status(), `GET invoice ${id}`).toBe(200);

@@ -88,13 +88,14 @@ model Supplier {
 }
 
 model Site {
-  id              String      @id @default(cuid())
-  code            String      @unique
+  id              String       @id @default(cuid())
+  code            String       @unique
   name            String
   deliveryAddress String?
   orders          HireOrder[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  suspensions     Suspension[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model HireOrder {
@@ -222,4 +223,20 @@ model Finding {
   createdAt       DateTime     @default(now())
 
   @@index([invoiceId])
+}
+
+/// A period when a site was closed and the supplier agreed to credit "free days" on every hire
+/// order of that site (brief 4.1). Check R16 looks for that credit on the invoices.
+model Suspension {
+  id         String   @id @default(cuid())
+  site       Site     @relation(fields: [siteId], references: [id])
+  siteId     String
+  periodFrom String
+  periodTo   String
+  /// Working days the supplier credits on each hire line of that period.
+  freeDays   Int
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([siteId])
 }
