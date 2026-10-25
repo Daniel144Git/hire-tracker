@@ -33,6 +33,7 @@ The project is inspired by real procurement work, but **all data in this repo is
 ## 3. Scope
 
 ### MVP (phases 0-4)
+
 1. Sites, hire orders and items (with accessories): create, edit, off-hire, record collection.
 2. Invoices and invoice lines: manual entry, lines linked to orders by order number / fleet code.
 3. **Charge calculator**: given an order's agreed rate and the supplier's charging rules, the expected charge for any period.
@@ -42,6 +43,7 @@ The project is inspired by real procurement work, but **all data in this repo is
 7. Due-date and payment tracking: due in 7/14 days, overdue, paid/unpaid/queried per invoice.
 
 ### Later (phases 5-8)
+
 8. Upload invoice PDF, AI extraction of the lines (mock in tests, an AI API for real use), review screen. Statement import and R11.
 9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export.
 10. Service events and the "service billed but not recorded" check.
@@ -50,14 +52,17 @@ The project is inspired by real procurement work, but **all data in this repo is
 13. Optional: Java API test module (RestAssured + JUnit 5) in CI; roles (admin / site manager); Monday.com sync behind an interface.
 
 ### Out of scope
+
 Payments, accounting ledger, email ingestion, multiple companies.
 
 ## 4. Business rules
 
 ### 4.1 Charging rules
+
 These rules were confirmed against real invoices (figures below are fictional). They are the default supplier profile; other profiles (daily rate, calendar days, minimum charge) stay configurable but are not needed for the MVP.
 
 **Working-day weekly rate (default profile):**
+
 - Each item has a **rate per week**, where a week = **5 working days** (Mon-Fri). Weekends are not charged. No minimum hire period.
 - Chargeable days for a billing period = number of working days from `periodFrom` to `periodTo` **inclusive**.
 - `weeks = floor(days / 5)`, `extraDays = days mod 5`.
@@ -70,17 +75,20 @@ These rules were confirmed against real invoices (figures below are fictional). 
 - UK bank holidays: open question, most likely still charged as working days. Make it a supplier flag; test both.
 
 **Other charges on the same invoice:**
+
 - **Damage waiver**: a percentage (e.g. 10%) of the hire charges on that invoice, one line per invoice, rounded to the penny. Not applied to transport. It applies to most orders but not all (some plant categories have none), so it is a per-order flag `damageWaiverApplies`, defaulting to the supplier's setting.
 - Lines can have quantity > 1 (e.g. 4 identical scissor lifts) without individual fleet codes; the charge is qty × line charge.
 - **Transport**: delivery and collection charges as fixed lines on the first and last invoice.
 - Each line has its own quantity, description, **fleet code** (the physical item's id), period, "wks/days", rate and total.
 
 **Invoice structure (what the extractor must read):**
+
 - Header: invoice number, invoice date, due date (30 days), supplier's **job/contract number** (one per hire order; stays the same on every monthly invoice of that order), customer reference (free text naming the site, inconsistently spelt), **type** (`Continuation` / `Return` / `Sale`), **last invoice number** (links the chain of a hire order), account number.
 - Body: one or more **despatch** blocks (despatch number + delivery date + delivery address + site contact), each with its hire lines; then damage waiver and transport lines; then VAT summary and totals.
 - The customer reference must be normalised to a `Site` (aliases: "RIVERSIDE", "Riverside Tower", "riverside" → one site), and the delivery address is a second signal.
 
 **Returns, credits and off-hire (confirmed on real documents):**
+
 - A **Return** invoice is issued when an item comes off hire. It is dated around the collection (often a week or more later), covers the 1st of the month to the off-hire date, and carries the collection transport lines dated on the collection day. Its "last invoice" points to the previous continuation of the same job number.
 - The supplier bills the whole month on the continuation invoice even when the item went off hire a few days earlier, then issues a **credit note** (type `Return`, separate "C" number) for the over-billed working days at the same rate, with a negative damage-waiver line. The credit's period can be printed with From later than To (e.g. "31/08 to 27/08"); the extractor must accept that and treat the days as a credit.
 - So R1 has two outcomes: an overcharge the supplier has **not** credited (raise a query), and one already credited (match the credit to the finding and close it).
@@ -92,39 +100,43 @@ These rules were confirmed against real invoices (figures below are fictional). 
 **Supplier statement:** a monthly statement lists every invoice (date, job number, invoice number, customer reference, amount), and an "outstanding" spreadsheet lists what is unpaid with due dates. Both are inputs for check R11.
 
 ### 4.2 Reconciliation checks
+
 Each check produces a finding with severity, reason, billed amount, expected amount and difference.
 
-| # | Check | Example finding |
-|---|---|---|
-| R1 | Billed after end of hire or after collection; closed automatically when a matching credit note arrives | Order 1001 off-hired 12/06, line billed to 30/06: 12 working days overcharged, no credit received |
-| R2 | Billed before start of hire | |
-| R3 | Same order billed twice for overlapping days | 01/05-31/05 appears on two invoices |
-| R4 | Missing period: no invoice for a month while the item was on hire | Possible late invoice, plan for it |
-| R5 | Amount differs from expected (agreed rate × chargeable units) beyond tolerance | Billed £412.80, expected £398.40 |
-| R6 | Rate drift: same order, same length of period, different price from last month | |
-| R7 | Continuation invoice after a return invoice for the same order | |
-| R8 | Fleet code on the invoice not on any open order, or on a different site | |
-| R9 | Service / maintenance charge with no matching service event | |
-| R10 | VAT on a line ≠ round(net × VAT rate, 2), or invoice lines don't add up to the invoice total | |
-| R11 | Statement reconciliation: an invoice on the supplier statement is missing from our records (never received), or the amount differs, or we hold an invoice that is not on the statement | Invoice 123 on the statement for £336.19, not in Hire Tracker: ask for a copy |
-| R12 | Same item type hired at different weekly rates on different orders (rate inconsistency across orders) | Adaptor at £3.50/week on one order and £3.75/week on another |
-| R13 | Damage waiver ≠ configured % of hire charges on that invoice, charged on transport, present on an order flagged as exempt, or missing on an order where it applied last month | |
-| R14 | Broken continuation chain: "last invoice" on a continuation invoice doesn't match the previous invoice we hold for that job number (a missing invoice, or something changed on the order) | |
-| R16 | Suspension credit missing on an order of a site that had a suspension in that period | |
-| R17 | Transport: collection (or delivery) charged more than once on the same order and period (failed collection attempts) | Two "Tower Collection" lines two days apart |
-| R15 | **Item tracking month to month**, per job number: a fleet code billed last month is gone this month with no return invoice (returned? lost? swapped?); a new fleet code appears on an existing order (item swapped: check the rate and the start date); a fleet code moves between sites | Fleet code X on job 1001 billed in July, absent in August, no Return invoice: confirm on site |
+| #   | Check                                                                                                                                                                                                                                                                                    | Example finding                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| R1  | Billed after end of hire or after collection; closed automatically when a matching credit note arrives                                                                                                                                                                                   | Order 1001 off-hired 12/06, line billed to 30/06: 12 working days overcharged, no credit received |
+| R2  | Billed before start of hire                                                                                                                                                                                                                                                              |                                                                                                   |
+| R3  | Same order billed twice for overlapping days                                                                                                                                                                                                                                             | 01/05-31/05 appears on two invoices                                                               |
+| R4  | Missing period: no invoice for a month while the item was on hire                                                                                                                                                                                                                        | Possible late invoice, plan for it                                                                |
+| R5  | Amount differs from expected (agreed rate × chargeable units) beyond tolerance                                                                                                                                                                                                           | Billed £412.80, expected £398.40                                                                  |
+| R6  | Rate drift: same order, same length of period, different price from last month                                                                                                                                                                                                           |                                                                                                   |
+| R7  | Continuation invoice after a return invoice for the same order                                                                                                                                                                                                                           |                                                                                                   |
+| R8  | Fleet code on the invoice not on any open order, or on a different site                                                                                                                                                                                                                  |                                                                                                   |
+| R9  | Service / maintenance charge with no matching service event                                                                                                                                                                                                                              |                                                                                                   |
+| R10 | VAT on a line ≠ round(net × VAT rate, 2), or invoice lines don't add up to the invoice total                                                                                                                                                                                             |                                                                                                   |
+| R11 | Statement reconciliation: an invoice on the supplier statement is missing from our records (never received), or the amount differs, or we hold an invoice that is not on the statement                                                                                                   | Invoice 123 on the statement for £336.19, not in Hire Tracker: ask for a copy                     |
+| R12 | Same item type hired at different weekly rates on different orders (rate inconsistency across orders)                                                                                                                                                                                    | Adaptor at £3.50/week on one order and £3.75/week on another                                      |
+| R13 | Damage waiver ≠ configured % of hire charges on that invoice, charged on transport, present on an order flagged as exempt, or missing on an order where it applied last month                                                                                                            |                                                                                                   |
+| R14 | Broken continuation chain: "last invoice" on a continuation invoice doesn't match the previous invoice we hold for that job number (a missing invoice, or something changed on the order)                                                                                                |                                                                                                   |
+| R16 | Suspension credit missing on an order of a site that had a suspension in that period                                                                                                                                                                                                     |                                                                                                   |
+| R17 | Transport: collection (or delivery) charged more than once on the same order and period (failed collection attempts)                                                                                                                                                                     | Two "Tower Collection" lines two days apart                                                       |
+| R15 | **Item tracking month to month**, per job number: a fleet code billed last month is gone this month with no return invoice (returned? lost? swapped?); a new fleet code appears on an existing order (item swapped: check the rate and the start date); a fleet code moves between sites | Fleet code X on job 1001 billed in July, absent in August, no Return invoice: confirm on site     |
 
 Tolerance for R5/R6/R12 is configurable (default £0.05). R15 is the heart of the "are we still paying for things that are not on site" question: the on-hire register is built from it, and every finding there is marked "confirm on site".
 
 ### 4.2a Due dates and payment tracking
+
 Every invoice has a due date (the supplier prints it; default 30 days from the invoice date). The app tracks `paymentStatus` (`UNPAID`, `PAID`, `QUERIED`, `CREDITED`) and shows what is due in the next 7 / 14 days and what is overdue, per supplier and per site. The monthly statement and the outstanding spreadsheet are imported (CSV/XLSX) to run R11 and to update what the supplier still considers unpaid. This replaces the manual upload into the team's task board; a later phase can push items to Monday.com through an interface.
 
 ### 4.3 VAT and rounding
+
 - VAT is calculated **per line, rounded to the penny**; totals are the sum of rounded lines.
 - Reports always use the per-line figure, so they match the invoices exactly.
 - Tests must prove that `sum(rounded line VAT)` can differ from `round(net total × 0.2)` and that the report uses the former. (This exact few-pence discrepancy breaks real monthly cost reports.)
 
 ### 4.4 Cost allocation
+
 - Each order has a trade; a line can override it.
 - Monthly report: site × trade, net and gross, plus the list of lines behind each cell.
 - Yearly report: per site per month.
@@ -155,13 +167,14 @@ This may be refined; changes go in this file.
 
 ## 7. Test strategy
 
-| Layer | Tool | What it covers | Rough share |
-|---|---|---|---|
-| Unit | Vitest | charge calculator, chargeable days, overlaps and gaps, each reconciliation check, VAT rounding, allocation sums | most tests |
-| API | Playwright request | every endpoint: happy path, validation (400), not found (404), conflicts (409, e.g. duplicate invoice number), findings returned for a seeded invoice | many |
-| E2E | Playwright UI | add order → add invoice → see findings; off-hire an item → next invoice flagged; on-hire register; monthly allocation report | few, critical flows only |
+| Layer | Tool               | What it covers                                                                                                                                        | Rough share              |
+| ----- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| Unit  | Vitest             | charge calculator, chargeable days, overlaps and gaps, each reconciliation check, VAT rounding, allocation sums                                       | most tests               |
+| API   | Playwright request | every endpoint: happy path, validation (400), not found (404), conflicts (409, e.g. duplicate invoice number), findings returned for a seeded invoice | many                     |
+| E2E   | Playwright UI      | add order → add invoice → see findings; off-hire an item → next invoice flagged; on-hire register; monthly allocation report                          | few, critical flows only |
 
 Principles:
+
 - The charge calculator and reconciliation checks are built **test-first** (TDD). The commit history should show it.
 - Each check R1-R10 has its own test file with positive and negative cases and edge cases (month ends, leap year, off-hire on a weekend, period crossing a month).
 - Test data through builders/factories and API setup, not through the UI.

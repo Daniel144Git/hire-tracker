@@ -26,3 +26,10 @@ playwright/.cache/
 # OS and logs
 .DS_Store
 *.log
+
+# Misc
+*.pem
+.vercel
+
+# Florin's personal study notes (Romanian, local only)
+docs/explicatii.md
