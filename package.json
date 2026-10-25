@@ -11,7 +11,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=e2e",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "next": "16.4.3",
@@ -19,6 +22,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
@@ -35,6 +39,7 @@
     "node": ">=22.12"
   },
   "allowScripts": {
-    "unrs-resolver": false
+    "unrs-resolver": false,
+    "fsevents": false
   }
 }

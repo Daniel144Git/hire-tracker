@@ -12,10 +12,11 @@ Requires Node.js 24 (see `.nvmrc`; with nvm, run `nvm use`).
 
 ```bash
 npm install
+npx playwright install chromium
 npm run dev
 ```
 
-Then open http://localhost:3000.
+Then open http://localhost:3000. The API and E2E tests start the app themselves if it is not already running.
 
 | Command                | What it does                                                     |
 | ---------------------- | ---------------------------------------------------------------- |
@@ -27,5 +28,8 @@ Then open http://localhost:3000.
 | `npm run format:check` | Fails if any file is not formatted                               |
 | `npm test`             | Runs the unit tests (Vitest)                                     |
 | `npm run test:watch`   | Runs the unit tests in watch mode                                |
+| `npm run test:api`     | Runs the API tests (Playwright, no browser)                      |
+| `npm run test:e2e`     | Runs the end-to-end UI tests (Playwright, Chromium)              |
+| `npm run test:report`  | Opens the last Playwright HTML report                            |
 
 Status: Phase 0 (setup). All data in this repository is fictional.
