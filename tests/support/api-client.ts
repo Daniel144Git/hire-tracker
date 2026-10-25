@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext } from "@playwright/test";
-import { orderData, siteData, supplierData } from "./test-data";
+import { invoiceData, orderData, siteData, supplierData } from "./test-data";
 
 export interface Site {
   id: string;
@@ -13,6 +13,7 @@ export interface Supplier {
   id: string;
   name: string;
   damageWaiverPct: number;
+  paymentTerms: string;
 }
 
 export interface HireItem {
@@ -36,6 +37,38 @@ export interface Order {
   damageWaiverApplies: boolean;
   status: "ON_HIRE" | "OFF_HIRED" | "COLLECTED";
   items: HireItem[];
+}
+
+export interface InvoiceLine {
+  id: string;
+  position: number;
+  description: string;
+  fleetCode: string | null;
+  chargeType: string;
+  periodFrom: string | null;
+  periodTo: string | null;
+  net: number;
+  vat: number;
+  order: { id: string; supplierJobNo: string; site: { id: string; code: string } } | null;
+  hireItem: { id: string; fleetCode: string | null } | null;
+  linkProblem: string | null;
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  supplier: { id: string; name: string };
+  date: string;
+  dueDate: string;
+  type: string;
+  isCreditNote: boolean;
+  jobNo: string | null;
+  net: number;
+  vat: number;
+  gross: number;
+  checkStatus: string;
+  paymentStatus: string;
+  lines: InvoiceLine[];
 }
 
 /**
@@ -63,6 +96,21 @@ export class ApiClient {
     return this.post(
       "/api/orders",
       orderData({ supplierId: supplier.id, siteId: site.id }, options.overrides),
+    );
+  }
+
+  /** An invoice for an order: a hire line for its first item and a damage waiver line. */
+  async createInvoice(order: Order, overrides: Record<string, unknown> = {}): Promise<Invoice> {
+    return this.post(
+      "/api/invoices",
+      invoiceData(
+        {
+          supplierId: order.supplier.id,
+          jobNo: order.supplierJobNo,
+          fleetCode: order.items[0]?.fleetCode,
+        },
+        overrides,
+      ),
     );
   }
 
