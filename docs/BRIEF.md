@@ -157,6 +157,13 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 
 **Phase 5 is split in three parts:** 5a our order number, site recognition (aliases, delivery address) and fleet code changes; 5b PDF upload, extraction (mock in tests, an AI API for real use) and the review screen; 5c statement import and R11, then the acceptance test with real documents.
 
+**Implemented in Phase 5a:**
+
+- `HireOrder.orderRef` (unique) and `Invoice.orderRef`. `linkInvoiceLine` finds the header's order by our order number, then by job number; a line's fleet code matches an item's current or earlier codes. `UNKNOWN_ORDER_REF` joins the link problems, and R8 reports it once per invoice.
+- `FleetCodeChange` keeps an item's earlier codes. Recording a change re-links the supplier's unlinked lines and re-checks the order's invoices. R15 compares items, not raw codes, so a recorded change is the same item; one code gone plus one new code on the job is reported as a single possible swap.
+- `SiteAlias` stores how suppliers spell a site, normalised (upper case, letters and digits). `recognizeSite` tries, in order: a recorded alias, the exact name, the code as a word, every word of the reference in the name, the delivery postcode; when a rule fits two sites it returns them as candidates and picks none. `Invoice.siteId` comes from the first linked order (`siteMatchedBy = ORDER`), otherwise from recognition.
+- Unlinked lines are linked again when an order, an item, an order number or a fleet code is added or changed: an invoice can be entered before its order.
+
 ## 5. Suggested data model
 
 - `Supplier`: id, name, accountNo, rateUnit (`WEEK_5_WORKING_DAYS` default), chargeWeekends, chargeBankHolidays, minChargeDays, damageWaiverPct, paymentTerms (`END_OF_NEXT_MONTH` | `NET_N`), paymentTermsDays?
