@@ -59,6 +59,12 @@ enum ChargeType {
   OTHER
 }
 
+enum Severity {
+  HIGH
+  MEDIUM
+  LOW
+}
+
 /// Why an invoice line could not be linked to a hire order or item.
 enum LinkProblem {
   UNKNOWN_JOB_NO
@@ -155,6 +161,7 @@ model Invoice {
   checkStatus   CheckStatus   @default(NOT_CHECKED)
   paymentStatus PaymentStatus @default(UNPAID)
   lines         InvoiceLine[]
+  findings      Finding[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -187,6 +194,30 @@ model InvoiceLine {
   vatPence    Int
   /// Overrides the order's trade for cost allocation.
   trade       Trade?
+  findings    Finding[]
 
   @@index([orderId])
+}
+
+/// A discrepancy found by a reconciliation check (R1-R17) on an invoice.
+/// Findings are recalculated every time the checks run on the invoice.
+model Finding {
+  id              String       @id @default(cuid())
+  invoice         Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId       String
+  invoiceLine     InvoiceLine? @relation(fields: [invoiceLineId], references: [id], onDelete: Cascade)
+  invoiceLineId   String?
+  check           String
+  severity        Severity
+  message         String
+  billedPence     Int?
+  expectedPence   Int?
+  /// billed - expected: positive means overcharged.
+  differencePence Int?
+  /// True when the discrepancy is already settled, e.g. credited by a credit note.
+  resolved        Boolean      @default(false)
+  resolution      String?
+  createdAt       DateTime     @default(now())
+
+  @@index([invoiceId])
 }
