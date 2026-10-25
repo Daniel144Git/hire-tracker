@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { NotFoundError } from "@/server/errors";
+import { PaymentButtons } from "@/app/payments/payment-buttons";
 import { getInvoice, type InvoiceDto } from "@/server/services/invoices";
 import {
   CHARGE_TYPE_LABEL,
@@ -15,6 +16,13 @@ import {
 } from "../format";
 
 export const metadata: Metadata = { title: "Invoice" };
+
+const PAYMENT_LABEL: Record<string, string> = {
+  UNPAID: "Unpaid",
+  PAID: "Paid",
+  QUERIED: "Queried",
+  CREDITED: "Credited",
+};
 
 export default function InvoicePage({ params }: PageProps<"/invoices/[id]">) {
   return (
@@ -42,6 +50,7 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
     ["Net", formatPounds(invoice.net)],
     ["VAT", formatPounds(invoice.vat)],
     ["Gross", formatPounds(invoice.gross)],
+    ["Payment", PAYMENT_LABEL[invoice.paymentStatus]],
   ];
 
   return (
@@ -55,6 +64,11 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
           </div>
         ))}
       </dl>
+      <PaymentButtons
+        invoiceId={invoice.id}
+        invoiceNumber={invoice.number}
+        status={invoice.paymentStatus}
+      />
       <section aria-labelledby="findings-heading" className="flex flex-col gap-3">
         <h2 id="findings-heading" className="text-lg font-medium">
           Findings
