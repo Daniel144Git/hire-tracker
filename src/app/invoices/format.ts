@@ -22,3 +22,20 @@ export const LINK_PROBLEM_LABEL: Record<string, string> = {
   UNKNOWN_FLEET_CODE: "Fleet code not on any order",
   AMBIGUOUS_FLEET_CODE: "Not linked: fleet code on more than one order",
 };
+
+/** Short names of the reconciliation checks (brief 4.2). */
+export const CHECK_LABEL: Record<string, string> = {
+  R1: "Billed after off-hire",
+  R2: "Billed before start of hire",
+  R3: "Billed twice",
+  R5: "Amount differs from agreed rate",
+  R7: "Continuation after return",
+  R10: "VAT or totals",
+  R13: "Damage waiver",
+};
+
+export const SEVERITY_LABEL: Record<string, string> = {
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
+};

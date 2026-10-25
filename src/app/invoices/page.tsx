@@ -42,6 +42,7 @@ async function InvoicesTable() {
           <th scope="col" className="text-right">
             Gross
           </th>
+          <th scope="col">Open findings</th>
           <th scope="col">Lines not linked</th>
         </tr>
       </thead>
@@ -62,6 +63,15 @@ async function InvoicesTable() {
             </td>
             <td>{invoice.jobNo ?? "-"}</td>
             <td className="text-right whitespace-nowrap">{formatPounds(invoice.gross)}</td>
+            <td>
+              {invoice.openFindingCount}
+              {invoice.highFindingCount > 0 && (
+                <span className="font-semibold text-red-700 dark:text-red-400">
+                  {" "}
+                  ({invoice.highFindingCount} high)
+                </span>
+              )}
+            </td>
             <td>{invoice.unlinkedLineCount}</td>
           </tr>
         ))}

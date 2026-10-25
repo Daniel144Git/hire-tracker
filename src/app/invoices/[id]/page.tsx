@@ -5,7 +5,14 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { NotFoundError } from "@/server/errors";
 import { getInvoice, type InvoiceDto } from "@/server/services/invoices";
-import { CHARGE_TYPE_LABEL, formatPounds, INVOICE_TYPE_LABEL, LINK_PROBLEM_LABEL } from "../format";
+import {
+  CHARGE_TYPE_LABEL,
+  CHECK_LABEL,
+  formatPounds,
+  INVOICE_TYPE_LABEL,
+  LINK_PROBLEM_LABEL,
+  SEVERITY_LABEL,
+} from "../format";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -48,6 +55,13 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
           </div>
         ))}
       </dl>
+      <section aria-labelledby="findings-heading" className="flex flex-col gap-3">
+        <h2 id="findings-heading" className="text-lg font-medium">
+          Findings
+        </h2>
+        <FindingsSummary findings={invoice.findings} />
+        {invoice.findings.length > 0 && <FindingsTable findings={invoice.findings} />}
+      </section>
       <section aria-labelledby="lines-heading" className="flex flex-col gap-3">
         <h2 id="lines-heading" className="text-lg font-medium">
           Lines
@@ -136,4 +150,80 @@ function formatWeeksAndDays(weeks: number | null, days: number | null): string {
   if (weeks === null && days === null) return "-";
   const d = days ?? 0;
   return `${weeks ?? 0} wks ${d} ${d === 1 ? "day" : "days"}`;
+}
+
+type FindingRow = InvoiceDto["findings"][number];
+
+function FindingsSummary({ findings }: { findings: FindingRow[] }) {
+  const open = findings.filter((finding) => !finding.resolved);
+  const high = open.filter((finding) => finding.severity === "HIGH").length;
+  const atStake = open.reduce((sum, finding) => sum + Math.max(finding.difference ?? 0, 0), 0);
+  if (findings.length === 0) {
+    return (
+      <p data-testid="findings-summary">No discrepancies found: this invoice matches the orders.</p>
+    );
+  }
+  return (
+    <p data-testid="findings-summary">
+      {open.length} open {open.length === 1 ? "finding" : "findings"}
+      {high > 0 && `, ${high} high`}
+      {atStake > 0 && `. Overcharged: ${formatPounds(Math.round(atStake * 100) / 100)}`}
+      {findings.length > open.length && `. ${findings.length - open.length} resolved`}.
+    </p>
+  );
+}
+
+function FindingsTable({ findings }: { findings: FindingRow[] }) {
+  const amount = (value: number | null) => (value === null ? "-" : formatPounds(value));
+  return (
+    <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
+      <caption className="sr-only">Findings</caption>
+      <thead>
+        <tr className="border-b border-gray-400">
+          <th scope="col">Check</th>
+          <th scope="col">Severity</th>
+          <th scope="col">Line</th>
+          <th scope="col">Finding</th>
+          <th scope="col" className="text-right">
+            Billed
+          </th>
+          <th scope="col" className="text-right">
+            Expected
+          </th>
+          <th scope="col" className="text-right">
+            Difference
+          </th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {findings.map((finding) => (
+          <tr key={finding.id} className="border-b border-gray-200 align-top">
+            <th scope="row" className="py-2 font-medium whitespace-nowrap">
+              {finding.check} <span className="font-normal">{CHECK_LABEL[finding.check]}</span>
+            </th>
+            <td>
+              <span
+                className={
+                  finding.severity === "HIGH"
+                    ? "font-semibold text-red-700 dark:text-red-400"
+                    : finding.severity === "MEDIUM"
+                      ? "font-medium text-amber-800 dark:text-amber-300"
+                      : ""
+                }
+              >
+                {SEVERITY_LABEL[finding.severity]}
+              </span>
+            </td>
+            <td>{finding.linePosition ?? "Invoice"}</td>
+            <td>{finding.message}</td>
+            <td className="text-right whitespace-nowrap">{amount(finding.billed)}</td>
+            <td className="text-right whitespace-nowrap">{amount(finding.expected)}</td>
+            <td className="text-right whitespace-nowrap">{amount(finding.difference)}</td>
+            <td>{finding.resolved ? (finding.resolution ?? "Resolved") : "Open"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
