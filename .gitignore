@@ -37,3 +37,6 @@ docs/explicatii.md
 # Prisma generated client
 src/generated/
 .next-test/
+
+# Real documents (invoices, statements, spreadsheet): local only, never committed
+private/
