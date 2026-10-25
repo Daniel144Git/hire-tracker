@@ -41,7 +41,7 @@ describe("linkInvoiceLine: our order number and fleet code changes", () => {
     },
   ];
 
-  it("links by our order number ('Our ref') before the job number", () => {
+  it("links by our order number before the job number", () => {
     expect(linkInvoiceLine({}, { orderRef: "PO-1002", jobNo: "J100101" }, withRefs)).toEqual({
       orderId: "order-2",
       hireItemId: null,

@@ -7,7 +7,7 @@ import {
   textSchema,
 } from "./common";
 
-export const TRADES = ["MECH", "ELEC", "VENT", "BMS"] as const;
+export const TRADES = ["MECH", "ELEC", "VENT", "DUCT", "BMS"] as const;
 export const tradeSchema = z.enum(TRADES);
 
 export const hireItemSchema = z.strictObject({
@@ -26,7 +26,7 @@ export const orderCreateSchema = z.strictObject({
   supplierId: z.string().min(1, "Required"),
   siteId: z.string().min(1, "Required"),
   supplierJobNo: identifierSchema(40),
-  /** Our own order number, printed as "Our ref" on the supplier's invoices. */
+  /** Our own order number, printed on some suppliers' invoices (e.g. "Order No"). */
   orderRef: identifierSchema(40).optional(),
   trade: tradeSchema,
   startDate: isoDateSchema,

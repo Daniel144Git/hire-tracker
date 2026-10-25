@@ -4,7 +4,7 @@ export type LinkProblem =
 export interface OrderForLinking {
   id: string;
   supplierJobNo: string;
-  /** Our own order number ("Our ref" on the invoice). */
+  /** Our own order number, when the invoice prints it. */
   orderRef: string | null;
   /** previousFleetCodes: codes the item had before a recorded change (E-code swaps). */
   items: { id: string; fleetCode: string | null; previousFleetCodes?: string[] }[];
@@ -32,7 +32,7 @@ function codesOf(item: OrderForLinking["items"][number]): string[] {
 
 /**
  * Links one invoice line to the supplier's hire orders.
- * The header's order: by our order number ("Our ref") first, then by the supplier's job number.
+ * The header's order: by our order number first, then by the supplier's job number.
  * 1. A line with a fleet code links to the item with that code (current or earlier), first
  *    within the header's order, otherwise on any order if exactly one item matches.
  * 2. A line without one (damage waiver, transport) links to the header's order.

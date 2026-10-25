@@ -51,7 +51,7 @@ export interface CheckInvoice {
   isCreditNote: boolean;
   /** Job number printed in the header: one hire order. */
   jobNo: string | null;
-  /** "Our ref" printed in the header: our own order number. */
+  /** Our own order number, when the invoice prints it. */
   orderRef: string | null;
   /** "Last invoice" printed on the invoice: the previous invoice of the same job. */
   lastInvoiceNo: string | null;
