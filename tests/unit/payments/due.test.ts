@@ -34,7 +34,7 @@ describe("groupInvoicesByDueDate: what to pay, as of a date", () => {
     ["2026-11-02", "dueIn14Days", "due in 8 days"],
     ["2026-11-08", "dueIn14Days", "due in exactly 14 days"],
     ["2026-11-09", "later", "due in 15 days"],
-  ] as const)("puts an invoice due on %s in %s (%s)", (dueDate, group) => {
+  ] as const)("puts an invoice due on %s in %s (%s)", (dueDate, group, _case) => {
     const groups = groupInvoicesByDueDate([invoice(dueDate)], AS_OF);
 
     expect(numbers(groups[group])).toEqual([`INV-${dueDate}`]);
