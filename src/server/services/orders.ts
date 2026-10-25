@@ -12,6 +12,7 @@ import {
   type HireItemInput,
 } from "@/lib/schemas/order";
 import type { HireItem, Prisma } from "@/generated/prisma/client";
+import { recheckInvoicesForOrders } from "./reconciliation";
 
 const ORDER_STATUSES = ["ON_HIRE", "OFF_HIRED", "COLLECTED"] as const;
 
@@ -132,13 +133,14 @@ export async function offHireOrder(id: string, body: unknown): Promise<OrderDto>
   const input = offHireSchema.parse(body);
   const order = await getOrder(id);
   const change = planOffHire(order, input);
-  return toDto(
-    await db.hireOrder.update({
-      where: { id },
-      data: { ...change, offHireEnteredAt: new Date() },
-      include: orderInclude,
-    }),
-  );
+  const updated = await db.hireOrder.update({
+    where: { id },
+    data: { ...change, offHireEnteredAt: new Date() },
+    include: orderInclude,
+  });
+  // R1 compares every invoice of this order with the off-hire date just entered.
+  await recheckInvoicesForOrders([id]);
+  return toDto(updated);
 }
 
 export async function recordCollection(id: string, body: unknown): Promise<OrderDto> {

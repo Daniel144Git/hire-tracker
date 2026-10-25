@@ -6,6 +6,7 @@ import { calculateDueDate } from "@/lib/invoices/due-date";
 import { linkInvoiceLine } from "@/lib/invoices/link-line";
 import { invoiceCreateSchema, type InvoiceLineInput } from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
+import { checkInvoice, recheckInvoicesForOrders, toFindingDto } from "./reconciliation";
 
 export const invoiceFilterSchema = z.strictObject({
   supplierId: z.string().min(1).optional(),
@@ -15,6 +16,7 @@ export const invoiceFilterSchema = z.strictObject({
 const summaryInclude = {
   supplier: { select: { id: true, name: true } },
   lines: { select: { linkProblem: true } },
+  findings: { where: { resolved: false }, select: { severity: true } },
 } satisfies Prisma.InvoiceInclude;
 
 const detailInclude = {
@@ -32,6 +34,7 @@ const detailInclude = {
       hireItem: { select: { id: true, fleetCode: true, description: true } },
     },
   },
+  findings: { orderBy: { rank: "asc" } },
 } satisfies Prisma.InvoiceInclude;
 
 type InvoiceSummaryRow = Prisma.InvoiceGetPayload<{ include: typeof summaryInclude }>;
@@ -62,12 +65,17 @@ function summaryDto(invoice: InvoiceSummaryRow) {
     ...headerDto(invoice),
     lineCount: invoice.lines.length,
     unlinkedLineCount: invoice.lines.filter((line) => line.linkProblem !== null).length,
+    /** Findings not yet resolved, e.g. not credited. */
+    openFindingCount: invoice.findings.length,
+    highFindingCount: invoice.findings.filter((finding) => finding.severity === "HIGH").length,
   };
 }
 
 function detailDto(invoice: InvoiceDetailRow) {
+  const linePosition = new Map(invoice.lines.map((line) => [line.id, line.position]));
   return {
     ...headerDto(invoice),
+    findings: invoice.findings.map((finding) => toFindingDto(finding, linePosition)),
     lines: invoice.lines.map((line) => ({
       id: line.id,
       position: line.position,
@@ -139,6 +147,7 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
   });
 
   const invoice = await db.invoice.create({
+    select: { id: true },
     data: {
       ...input,
       dueDate: input.dueDate ?? calculateDueDate(input.date, supplier),
@@ -158,9 +167,27 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
         }),
       },
     },
-    include: detailInclude,
   });
-  return detailDto(invoice);
+
+  // Check the new invoice, then the other invoices of the same orders: a credit note can close
+  // an R1 finding on an earlier invoice.
+  await checkInvoice(invoice.id);
+  const linkedOrderIds = await db.invoiceLine.findMany({
+    where: { invoiceId: invoice.id, orderId: { not: null } },
+    select: { orderId: true },
+    distinct: ["orderId"],
+  });
+  await recheckInvoicesForOrders(
+    linkedOrderIds.map((line) => line.orderId).filter((id) => id !== null),
+    invoice.id,
+  );
+  return getInvoice(invoice.id);
+}
+
+/** POST /api/invoices/:id/check: runs the checks again, e.g. after an order was corrected. */
+export async function recheckInvoice(id: string) {
+  await getInvoice(id);
+  return checkInvoice(id);
 }
 
 function toLineData({ rate, net, vat, ...line }: InvoiceLineInput) {

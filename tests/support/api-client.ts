@@ -54,6 +54,20 @@ export interface InvoiceLine {
   linkProblem: string | null;
 }
 
+export interface Finding {
+  id: string;
+  check: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+  invoiceLineId: string | null;
+  linePosition: number | null;
+  message: string;
+  billed: number | null;
+  expected: number | null;
+  difference: number | null;
+  resolved: boolean;
+  resolution: string | null;
+}
+
 export interface Invoice {
   id: string;
   number: string;
@@ -69,6 +83,7 @@ export interface Invoice {
   checkStatus: string;
   paymentStatus: string;
   lines: InvoiceLine[];
+  findings: Finding[];
 }
 
 /**
@@ -116,6 +131,12 @@ export class ApiClient {
 
   async offHire(orderId: string, body: { offHireDate: string; collectionNo?: string }) {
     return this.post<Order>(`/api/orders/${orderId}/off-hire`, body, 200);
+  }
+
+  async getInvoice(id: string): Promise<Invoice> {
+    const response = await this.request.get(`/api/invoices/${id}`);
+    expect(response.status(), `GET invoice ${id}`).toBe(200);
+    return (await response.json()) as Invoice;
   }
 
   private async post<T>(url: string, data: unknown, expectedStatus = 201): Promise<T> {

@@ -22,6 +22,11 @@ export class InvoicesPage {
       .filter({ has: this.page.getByRole("link", { name: number, exact: true }) });
   }
 
+  /** The "Open findings" cell of an invoice, e.g. "1 (1 high)". */
+  openFindings(number: string): Locator {
+    return this.row(number).getByRole("cell").nth(6);
+  }
+
   /** The "Lines not linked" count of an invoice. */
   unlinkedLines(number: string): Locator {
     return this.row(number).getByRole("cell").last();

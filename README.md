@@ -54,6 +54,22 @@ All endpoints take and return JSON. Money is in pounds, dates are `YYYY-MM-DD`. 
 | `POST /api/orders/:id/off-hire`   | Off-hire: date and optional collection number       | 400, 404, 409 not on hire     |
 | `POST /api/orders/:id/collection` | Record the collection of an off-hired order         | 400, 404, 409 not off-hired   |
 
+## Reconciliation checks
+
+Every invoice is checked as soon as it is saved, and again when something it depends on changes: an off-hire date entered on one of its orders, or a credit note for the same orders. Each check is a pure function in `src/lib/reconciliation/checks`, with its own unit test file.
+
+| Check | What it finds                                                                                                                                | Severity                     |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| R1    | Hire billed after the off-hire date; closed automatically when credit notes cover the overcharge                                             | High                         |
+| R2    | Hire billed before the start of hire                                                                                                         | High                         |
+| R3    | The same item billed twice for the same working days                                                                                         | High                         |
+| R5    | A hire line that differs from the agreed rate x chargeable units by more than £0.05                                                          | Medium (Low if undercharged) |
+| R7    | A continuation invoice after the order's return invoice                                                                                      | Medium                       |
+| R10   | Line VAT that is not 20% rounded to the penny, or header totals that are not the sum of the lines                                            | Medium                       |
+| R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing | Medium (Low if missing)      |
+
+The remaining checks of the brief (R4, R6, R8, R12, R14, R15, R16, R17) and the monthly discrepancy report follow in the next part of phase 4.
+
 ## Continuous integration
 
 GitHub Actions runs on every pull request and on every push to `main` (`.github/workflows/ci.yml`):
@@ -65,4 +81,4 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
 
-Status: Phase 3 (invoices and invoice lines). Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.
+Status: Phase 4 in progress (reconciliation engine: checks R1, R2, R3, R5, R7, R10 and R13). Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.

@@ -27,7 +27,8 @@ test.describe("POST /api/invoices", () => {
         net: 231,
         vat: 46.2,
         gross: 277.2,
-        checkStatus: "NOT_CHECKED",
+        // The reconciliation checks run as soon as an invoice is saved.
+        checkStatus: "CHECKED",
         paymentStatus: "UNPAID",
       });
       expect(invoice.lines).toEqual([
