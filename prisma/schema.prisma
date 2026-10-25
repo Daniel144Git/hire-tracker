@@ -32,6 +32,40 @@ enum OrderStatus {
   COLLECTED
 }
 
+enum InvoiceType {
+  CONTINUATION
+  RETURN
+  SALE
+}
+
+enum CheckStatus {
+  NOT_CHECKED
+  CHECKED
+  QUERIED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  QUERIED
+  CREDITED
+}
+
+enum ChargeType {
+  HIRE
+  DAMAGE_WAIVER
+  TRANSPORT
+  SALE
+  OTHER
+}
+
+/// Why an invoice line could not be linked to a hire order or item.
+enum LinkProblem {
+  UNKNOWN_JOB_NO
+  UNKNOWN_FLEET_CODE
+  AMBIGUOUS_FLEET_CODE
+}
+
 model Supplier {
   id                 String       @id @default(cuid())
   name               String       @unique
@@ -42,6 +76,7 @@ model Supplier {
   paymentTerms       PaymentTerms @default(END_OF_NEXT_MONTH)
   paymentTermsDays   Int?
   orders             HireOrder[]
+  invoices           Invoice[]
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 }
@@ -57,11 +92,11 @@ model Site {
 }
 
 model HireOrder {
-  id                  String      @id @default(cuid())
+  id                  String        @id @default(cuid())
   supplierJobNo       String
-  supplier            Supplier    @relation(fields: [supplierId], references: [id])
+  supplier            Supplier      @relation(fields: [supplierId], references: [id])
   supplierId          String
-  site                Site        @relation(fields: [siteId], references: [id])
+  site                Site          @relation(fields: [siteId], references: [id])
   siteId              String
   trade               Trade
   startDate           String
@@ -69,10 +104,11 @@ model HireOrder {
   collectionNo        String?
   offHireEnteredAt    DateTime?
   damageWaiverApplies Boolean
-  status              OrderStatus @default(ON_HIRE)
+  status              OrderStatus   @default(ON_HIRE)
   items               HireItem[]
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  invoiceLines        InvoiceLine[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   // The supplier's job number identifies one hire order and stays the same on every invoice.
   @@unique([supplierId, supplierJobNo])
@@ -80,17 +116,77 @@ model HireOrder {
 }
 
 model HireItem {
-  id              String    @id @default(cuid())
-  order           HireOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id              String        @id @default(cuid())
+  order           HireOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId         String
   description     String
   fleetCode       String?
-  qty             Int       @default(1)
+  qty             Int           @default(1)
   weeklyRatePence Int
   despatchNo      String?
   despatchDate    String?
-  isAccessory     Boolean   @default(false)
-  createdAt       DateTime  @default(now())
+  isAccessory     Boolean       @default(false)
+  invoiceLines    InvoiceLine[]
+  createdAt       DateTime      @default(now())
 
   @@index([fleetCode])
+}
+
+/// An invoice as printed by the supplier. Amounts are stored exactly as billed, even when they
+/// are wrong: finding what is wrong is the job of the reconciliation checks, not of data entry.
+model Invoice {
+  id            String        @id @default(cuid())
+  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  supplierId    String
+  number        String
+  date          String
+  dueDate       String
+  type          InvoiceType
+  isCreditNote  Boolean       @default(false)
+  /// The supplier's job / contract number printed in the header: one hire order.
+  jobNo         String?
+  /// "Last invoice" printed on continuation invoices: links the chain of a hire order.
+  lastInvoiceNo String?
+  customerRef   String?
+  netPence      Int
+  vatPence      Int
+  grossPence    Int
+  filePath      String?
+  checkStatus   CheckStatus   @default(NOT_CHECKED)
+  paymentStatus PaymentStatus @default(UNPAID)
+  lines         InvoiceLine[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Duplicate invoice protection: an invoice number is unique per supplier.
+  @@unique([supplierId, number])
+  @@index([jobNo])
+}
+
+model InvoiceLine {
+  id          String       @id @default(cuid())
+  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  position    Int
+  order       HireOrder?   @relation(fields: [orderId], references: [id])
+  orderId     String?
+  hireItem    HireItem?    @relation(fields: [hireItemId], references: [id])
+  hireItemId  String?
+  linkProblem LinkProblem?
+  fleetCode   String?
+  description String
+  qty         Int          @default(1)
+  /// Billing period as printed. On credit notes From can be later than To.
+  periodFrom  String?
+  periodTo    String?
+  weeks       Int?
+  days        Int?
+  ratePence   Int?
+  chargeType  ChargeType
+  netPence    Int
+  vatPence    Int
+  /// Overrides the order's trade for cost allocation.
+  trade       Trade?
+
+  @@index([orderId])
 }
