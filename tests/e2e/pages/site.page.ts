@@ -83,6 +83,28 @@ export class SitePage {
     return this.onHireRow(fleetCode).getByRole("cell").nth(index);
   }
 
+  /** Records a new fleet code for an item; `item` is the option label, e.g. "J100101: Pipe groover (APX-PG-0317)". */
+  async recordNewFleetCode(change: {
+    item: string;
+    newCode: string;
+    changedOn: string;
+    note?: string;
+  }) {
+    const form = this.page.getByRole("form", { name: "New fleet code" });
+    await form.getByLabel("Item", { exact: true }).selectOption({ label: change.item });
+    await form.getByLabel("New fleet code").fill(change.newCode);
+    await form.getByLabel("Changed on").fill(change.changedOn);
+    if (change.note) await form.getByLabel("Note (optional)").fill(change.note);
+    await form.getByRole("button", { name: "Record new fleet code" }).click();
+  }
+
+  /** Saves how suppliers spell the site, one spelling per line. */
+  async saveSpellings(spellings: string[]) {
+    const form = this.page.getByRole("form", { name: "Site spellings" });
+    await form.getByLabel("Spellings, one per line").fill(spellings.join("\n"));
+    await form.getByRole("button", { name: "Save spellings" }).click();
+  }
+
   async recordSuspension(suspension: {
     from: string;
     to: string;

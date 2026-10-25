@@ -18,6 +18,7 @@ export interface InvoiceEntry {
   number: string;
   type: "Continuation" | "Return" | "Sale";
   date: string;
+  orderRef?: string;
   jobNo?: string;
   net: number;
   vat: number;
@@ -60,6 +61,8 @@ export class InvoiceFormPage {
     await this.numberInput.fill(invoice.number);
     await form.getByLabel("Type", { exact: true }).selectOption({ label: invoice.type });
     await form.getByLabel("Invoice date").fill(invoice.date);
+    if (invoice.orderRef)
+      await form.getByLabel("Our ref (our order number)").fill(invoice.orderRef);
     if (invoice.jobNo) await form.getByLabel("Job number").fill(invoice.jobNo);
     await form.getByLabel("Net total (£)").fill(String(invoice.net));
     await form.getByLabel("VAT total (£)").fill(String(invoice.vat));

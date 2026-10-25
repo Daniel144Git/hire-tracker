@@ -45,6 +45,13 @@ export function CreateOrderForm({ siteId, suppliers }: Props) {
           defaultValue={values.supplierJobNo}
           error={errors.supplierJobNo}
         />
+        <Field
+          id="order-ref"
+          name="orderRef"
+          label="Our order number"
+          defaultValue={values.orderRef}
+          error={errors.orderRef}
+        />
         <SelectField
           id="order-trade"
           name="trade"

@@ -3,7 +3,13 @@
 import { refresh } from "next/cache";
 import { readForm, toFormState, type FormState } from "@/server/form-state";
 import { createSite } from "@/server/services/sites";
-import { createOrder, offHireOrder, recordCollection } from "@/server/services/orders";
+import {
+  changeFleetCode,
+  createOrder,
+  offHireOrder,
+  recordCollection,
+} from "@/server/services/orders";
+import { setSiteAliases } from "@/server/services/sites";
 import { createSuspension } from "@/server/services/suspensions";
 
 // Server Actions for the sites pages. Each one reads the form, calls the same service as the
@@ -26,6 +32,7 @@ export async function createOrderAction(_prev: FormState, formData: FormData): P
     "siteId",
     "supplierId",
     "supplierJobNo",
+    "orderRef",
     "trade",
     "startDate",
     "description",
@@ -101,5 +108,41 @@ export async function createSuspensionAction(
     };
   } catch (error) {
     return toFormState(error, { ...values, ...(freeDays ? { freeDays } : {}) });
+  }
+}
+
+export async function setAliasesAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const siteId = String(formData.get("siteId") ?? "");
+  const text = String(formData.get("aliases") ?? "");
+  const aliases = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  try {
+    const site = await setSiteAliases(siteId, { aliases });
+    refresh();
+    const count = site.aliases.length;
+    return {
+      status: "success",
+      message: `Saved ${count} ${count === 1 ? "spelling" : "spellings"} for ${site.code}`,
+    };
+  } catch (error) {
+    return toFormState(error, { aliases: text });
+  }
+}
+
+export async function changeFleetCodeAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { item, ...values } = readForm(formData, ["item", "newCode", "changedOn", "note"]);
+  // The select's value is "orderId/itemId".
+  const [orderId = "", itemId = ""] = (item ?? "").split("/");
+  try {
+    const changed = await changeFleetCode(orderId, itemId, values);
+    refresh();
+    return { status: "success", message: `${changed.description} is now ${changed.fleetCode}` };
+  } catch (error) {
+    return toFormState(error, { item: item ?? "", ...values });
   }
 }

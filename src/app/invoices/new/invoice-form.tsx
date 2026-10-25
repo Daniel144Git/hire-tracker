@@ -67,9 +67,11 @@ export function InvoiceForm({ suppliers }: Props) {
         </SelectField>
         {field("date", "Invoice date", { type: "date" })}
         {field("dueDate", "Due date (optional)", { type: "date" })}
+        {field("orderRef", "Our ref (our order number)")}
         {field("jobNo", "Job number")}
         {field("lastInvoiceNo", "Last invoice number (optional)")}
         {field("customerRef", "Customer reference (optional)")}
+        {field("deliveryAddress", "Delivery address (optional)")}
         <div className="flex items-center gap-2 self-end pb-2">
           <input
             id="invoice-credit-note"
