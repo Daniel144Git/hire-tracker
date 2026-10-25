@@ -45,7 +45,7 @@ The project is inspired by real procurement work, but **all data in this repo is
 ### Later (phases 5-8)
 
 8. Upload invoice PDF, AI extraction of the lines (mock in tests, an AI API for real use), review screen. Statement import and R11.
-9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export.
+9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export. The monthly export also groups the invoice PDFs by site: a ZIP with one folder per site (e.g. `RVS - Riverside Tower/`), each holding that site's invoices and a CSV summary (requested by Florin; Google Drive folders are an option if the connector is set up).
 10. Service events and the "service billed but not recorded" check.
 11. Draft a query email to the hire company from the discrepancy report.
 12. Alerts: item on hire longer than N days, cost to date above a threshold (time to off-hire or buy).
@@ -202,6 +202,14 @@ This may be refined; changes go in this file.
 - R17 recognises "collect" and "deliver" in transport descriptions and flags only the later of two charges for the same order.
 - R4 is not an invoice check: it runs for the monthly report, on all orders on hire for at least one working day of the month, against the hire periods billed for them.
 - The report sums the positive differences of open findings, in whole pence.
+
+**Implemented in Phase 4c:** the on-hire register, due dates and payments, and the demo data.
+
+- On-hire register per site (`GET /api/sites/:id/on-hire?asOf=`): every item of an order on hire, or off-hired and waiting for collection, with calendar and working days on hire, cost to date at the agreed rate, billed to date (credits included) and not yet billed. `asOf` defaults to today; it is a parameter so the register can be tested for any date.
+- Payments (`GET /api/payments/due?asOf=`): unpaid invoices grouped as overdue, due in 0 to 7 days, 8 to 14 days and later; queried invoices on hold, apart; credit notes and paid or credited invoices left out; totals per site, the site being that of the invoice's first linked order.
+- `PATCH /api/invoices/:id` changes only `paymentStatus` and `checkStatus`: the invoice itself stays as printed.
+- R1 and R2 on the same line each report only their part of the overcharge (R1 cuts the period at the off-hire date only, R2 at the start only), so the report never counts the same pounds twice.
+- The seed creates the demo data through the services, so every check runs on it; the test database is seeded too, and an API test proves every implemented check has an example.
 
 ## 6. Tech stack
 
