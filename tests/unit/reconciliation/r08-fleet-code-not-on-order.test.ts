@@ -24,6 +24,9 @@ describe("R8: fleet code not on an order of this job and site", () => {
         message:
           "Fleet code APX-ZZ-0000 is not on any hire order: are we paying for an item that is not on site?",
         billed: 210,
+        // Nothing on our orders justifies this charge, so all of it is at stake.
+        expected: 0,
+        difference: 210,
       }),
     ]);
   });
