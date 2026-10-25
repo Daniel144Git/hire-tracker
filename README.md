@@ -17,15 +17,15 @@ npm run dev
 
 Then open http://localhost:3000.
 
-| Command             | What it does                                                     |
-| ------------------- | ---------------------------------------------------------------- |
-| `npm run dev`       | Starts the development server                                    |
-| `npm run build`     | Builds the production app                                        |
-| `npm run lint`      | Runs ESLint                                                      |
-| `npm run typecheck` | Generates Next.js route types, then runs the TypeScript compiler |
-| `npm run format` | Formats all files with Prettier |
-| `npm run format:check` | Fails if any file is not formatted |
-| `npm test` | Runs the unit tests (Vitest) |
-| `npm run test:watch` | Runs the unit tests in watch mode |
+| Command                | What it does                                                     |
+| ---------------------- | ---------------------------------------------------------------- |
+| `npm run dev`          | Starts the development server                                    |
+| `npm run build`        | Builds the production app                                        |
+| `npm run lint`         | Runs ESLint                                                      |
+| `npm run typecheck`    | Generates Next.js route types, then runs the TypeScript compiler |
+| `npm run format`       | Formats all files with Prettier                                  |
+| `npm run format:check` | Fails if any file is not formatted                               |
+| `npm test`             | Runs the unit tests (Vitest)                                     |
+| `npm run test:watch`   | Runs the unit tests in watch mode                                |
 
 Status: Phase 0 (setup). All data in this repository is fictional.
