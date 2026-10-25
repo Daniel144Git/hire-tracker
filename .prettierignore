@@ -7,3 +7,4 @@ playwright-report/
 blob-report/
 package-lock.json
 next-env.d.ts
+.next-test/

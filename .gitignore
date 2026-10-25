@@ -36,3 +36,4 @@ docs/explicatii.md
 
 # Prisma generated client
 src/generated/
+.next-test/
