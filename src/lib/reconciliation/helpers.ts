@@ -89,3 +89,24 @@ export function finding(
     resolution: null,
   };
 }
+
+/** The earlier of two invoices: by date, then by number. */
+export function isEarlier(a: CheckInvoice, b: CheckInvoice): boolean {
+  return a.date === b.date ? a.number < b.number : isBefore(a.date, b.date);
+}
+
+/** The most recent invoice before this one that matches, or undefined. */
+export function previousInvoice(
+  context: ReconciliationContext,
+  matches: (invoice: CheckInvoice) => boolean,
+): CheckInvoice | undefined {
+  return context.otherInvoices
+    .filter((other) => !other.isCreditNote && isEarlier(other, context.invoice) && matches(other))
+    .sort((a, b) => (isEarlier(a, b) ? 1 : -1))[0];
+}
+
+/** The order of the invoice's job number. */
+export function jobOrderOf(context: ReconciliationContext): CheckOrder | undefined {
+  const { jobNo } = context.invoice;
+  return jobNo ? Object.values(context.orders).find((o) => o.supplierJobNo === jobNo) : undefined;
+}

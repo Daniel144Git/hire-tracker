@@ -16,11 +16,12 @@ import {
   weeksAndDays,
 } from "../helpers";
 import type { Check, CheckOrder } from "../types";
+import { rateChange } from "./r06-rate-drift";
 
 /**
  * R5: a hire line whose amount differs from the agreed rate x chargeable units by more than
- * the tolerance. Lines billed outside the hire are left to R1 and R2, so a single mistake is
- * not reported twice. An undercharge is reported too, as LOW.
+ * the tolerance. Lines billed outside the hire are left to R1 and R2, and a rate that changed
+ * since the previous billing to R6, so a single mistake is not reported twice. An undercharge is reported too, as LOW.
  */
 export const amountDiffersFromExpected: Check = (context) =>
   context.invoice.lines.filter(isHireCharge).flatMap((line) => {
@@ -29,6 +30,7 @@ export const amountDiffersFromExpected: Check = (context) =>
     const weeklyRate = weeklyRateOf(context, line);
     if (!order || !period || weeklyRate === undefined) return [];
     if (hasChargeableDaysOutsideHire(period, order, context.rules)) return [];
+    if (rateChange(context, line)) return []; // a change since last month is R6's
 
     const expected = expectedHireCharge({
       weeklyRate,

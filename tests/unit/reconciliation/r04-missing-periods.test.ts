@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findMissingPeriods, type OrderOnHire } from "@/lib/reconciliation/missing-periods";
+import {
+  findMissingPeriods,
+  monthRange,
+  type OrderOnHire,
+} from "@/lib/reconciliation/missing-periods";
 
 const rules = { chargeBankHolidays: true, bankHolidays: [] };
 const onHireSinceJuly: OrderOnHire = {
@@ -54,5 +58,16 @@ describe("R4: a month on hire with no invoice", () => {
     const weekendOnly = { ...onHireSinceJuly, startDate: "2026-08-29", offHireDate: "2026-08-30" };
 
     expect(findMissingPeriods("2026-08", [weekendOnly], [], rules)).toEqual([]);
+  });
+});
+
+describe("monthRange", () => {
+  it.each([
+    ["2026-08", "2026-08-31"],
+    ["2027-02", "2027-02-28"],
+    ["2028-02", "2028-02-29"],
+    ["2026-12", "2026-12-31"],
+  ])("%s ends on %s", (month, lastDay) => {
+    expect(monthRange(month)).toEqual({ from: `${month}-01`, to: lastDay });
   });
 });

@@ -1,13 +1,8 @@
 import { formatIsoDate, parseIsoDate } from "@/lib/charging/iso-date";
 import { WORKING_DAYS_PER_WEEK } from "@/lib/charging/hire-charge";
 import { countChargeableDays } from "@/lib/charging/working-days";
-import { finding, isBefore, isHireCharge, periodOf, weeklyRateOf, workingDays } from "../helpers";
-import type { Check, CheckInvoice } from "../types";
-
-/** The earlier of two invoices: by date, then by number. Only the later one is a duplicate. */
-function isEarlier(a: CheckInvoice, b: CheckInvoice): boolean {
-  return a.date === b.date ? a.number < b.number : isBefore(a.date, b.date);
-}
+import { finding, isEarlier, isHireCharge, periodOf, weeklyRateOf, workingDays } from "../helpers";
+import type { Check } from "../types";
 
 /**
  * R3: the same item billed for the same working days on an earlier invoice.
@@ -19,6 +14,7 @@ export const billedTwice: Check = (context) =>
     if (!period || !line.hireItemId) return [];
 
     const earlierBillings = context.otherInvoices
+      // Only the later of two invoices is the duplicate.
       .filter((other) => !other.isCreditNote && isEarlier(other, context.invoice))
       .flatMap((other) =>
         other.lines
