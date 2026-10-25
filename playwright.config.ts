@@ -35,13 +35,14 @@ export default defineConfig({
     },
   ],
 
-  // Recreates an empty test database, starts the app on it, and waits until /api/health answers.
-  // CI runs the production build (built in an earlier step); locally we use the dev server.
+  // Recreates an empty test database, builds the app and starts the production server on it,
+  // then waits until /api/health answers. Tests always run against a production build, locally
+  // and in CI: the dev server's hot reload can reload a page in the middle of a test.
   webServer: {
-    command: `npm run db:test:prepare && ${isCI ? "npx next start" : "npx next dev"} --port ${port}`,
+    command: `npm run db:test:prepare && npx next build && npx next start --port ${port}`,
     url: `${baseURL}/api/health`,
     reuseExistingServer: !isCI,
-    timeout: 120_000,
+    timeout: 180_000,
     env: {
       DATABASE_URL: "file:./prisma/test.db",
       NEXT_DIST_DIR: ".next-test",
