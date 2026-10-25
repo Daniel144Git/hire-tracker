@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { invoiceCreateSchema, invoiceLineSchema } from "@/lib/schemas/invoice";
+import { invoiceCreateSchema, invoiceLineSchema, invoiceUpdateSchema } from "@/lib/schemas/invoice";
 
 const hireLine = {
   description: "Scissor lift 19ft electric",
@@ -88,5 +88,26 @@ describe("invoiceCreateSchema", () => {
 
   it("rejects an invoice type that does not exist", () => {
     expect(invoiceCreateSchema.safeParse({ ...invoice, type: "INTERIM" }).success).toBe(false);
+  });
+});
+
+describe("invoiceUpdateSchema: only the statuses can change", () => {
+  it("accepts a payment status and a check status", () => {
+    expect(invoiceUpdateSchema.parse({ paymentStatus: "PAID", checkStatus: "QUERIED" })).toEqual({
+      paymentStatus: "PAID",
+      checkStatus: "QUERIED",
+    });
+  });
+
+  it("rejects a status that does not exist", () => {
+    expect(invoiceUpdateSchema.safeParse({ paymentStatus: "HALF_PAID" }).success).toBe(false);
+  });
+
+  it("does not let an invoice's amounts be edited: it stays as printed", () => {
+    expect(invoiceUpdateSchema.safeParse({ gross: 0 }).success).toBe(false);
+  });
+
+  it("rejects an update with no fields", () => {
+    expect(invoiceUpdateSchema.safeParse({}).success).toBe(false);
   });
 });

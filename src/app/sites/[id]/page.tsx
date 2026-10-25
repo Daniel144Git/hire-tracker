@@ -7,6 +7,8 @@ import { listOrders, type OrderDto } from "@/server/services/orders";
 import { getSite, type SiteDto } from "@/server/services/sites";
 import { listSuppliers } from "@/server/services/suppliers";
 import { listSuspensions } from "@/server/services/suspensions";
+import { getOnHireRegister, type OnHireRegister } from "@/server/services/register";
+import { formatPounds } from "@/app/invoices/format";
 import { SuspensionForm } from "./suspension-form";
 import { CreateOrderForm } from "./create-order-form";
 import { CollectionForm, OffHireForm } from "./order-forms";
@@ -27,10 +29,11 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
   const site = await findSite(id);
-  const [orders, suppliers, suspensions] = await Promise.all([
+  const [orders, suppliers, suspensions, register] = await Promise.all([
     listOrders({ siteId: id }),
     listSuppliers(),
     listSuspensions(id),
+    getOnHireRegister(id),
   ]);
 
   return (
@@ -42,6 +45,13 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
         {site.deliveryAddress && <p>{site.deliveryAddress}</p>}
         <p>{site.ordersOnHire} on hire</p>
       </div>
+
+      <section aria-labelledby="on-hire-heading" className="flex flex-col gap-3">
+        <h2 id="on-hire-heading" className="text-lg font-medium">
+          On hire now
+        </h2>
+        <OnHireTable register={register} />
+      </section>
 
       <section aria-labelledby="orders-heading" className="flex flex-col gap-3">
         <h2 id="orders-heading" className="text-lg font-medium">
@@ -165,6 +175,72 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
           </tr>
         ))}
       </tbody>
+    </table>
+  );
+}
+
+const REGISTER_STATUS: Record<string, string> = {
+  ON_HIRE: "On hire",
+  OFF_HIRED: "Off hired, awaiting collection",
+};
+
+/** The on-hire register: what is on site today, since when, and what it has cost so far. */
+function OnHireTable({ register }: { register: OnHireRegister }) {
+  const { rows, totals, asOf } = register;
+  if (rows.length === 0) return <p>Nothing is on hire on this site.</p>;
+  return (
+    <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
+      <caption className="text-left text-sm">As of {asOf}, at the agreed rates</caption>
+      <thead>
+        <tr className="border-b border-gray-400">
+          <th scope="col">Item</th>
+          <th scope="col">Job no</th>
+          <th scope="col">Since</th>
+          <th scope="col">Days on hire</th>
+          <th scope="col">Working days</th>
+          <th scope="col" className="text-right">
+            Cost to date
+          </th>
+          <th scope="col" className="text-right">
+            Billed
+          </th>
+          <th scope="col" className="text-right">
+            Not yet billed
+          </th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.itemId} className="border-b border-gray-200 align-top">
+            <th scope="row" className="py-2 font-normal">
+              {row.qty > 1 && `${row.qty} x `}
+              {row.description}
+              {row.fleetCode && ` (${row.fleetCode})`}
+            </th>
+            <td>{row.supplierJobNo}</td>
+            <td className="whitespace-nowrap">{row.startDate}</td>
+            <td>{row.calendarDaysOnHire}</td>
+            <td>{row.chargeableDays}</td>
+            <td className="text-right whitespace-nowrap">{formatPounds(row.costToDate)}</td>
+            <td className="text-right whitespace-nowrap">{formatPounds(row.billedToDate)}</td>
+            <td className="text-right whitespace-nowrap">{formatPounds(row.notYetBilled)}</td>
+            <td>{REGISTER_STATUS[row.status]}</td>
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr className="font-medium">
+          <th scope="row" className="py-2">
+            Total ({totals.items} {totals.items === 1 ? "item" : "items"})
+          </th>
+          <td colSpan={4} />
+          <td className="text-right whitespace-nowrap">{formatPounds(totals.costToDate)}</td>
+          <td className="text-right whitespace-nowrap">{formatPounds(totals.billedToDate)}</td>
+          <td className="text-right whitespace-nowrap">{formatPounds(totals.notYetBilled)}</td>
+          <td />
+        </tr>
+      </tfoot>
     </table>
   );
 }

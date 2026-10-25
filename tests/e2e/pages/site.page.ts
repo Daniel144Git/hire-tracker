@@ -7,8 +7,11 @@ export class SitePage {
   readonly newOrderForm: Locator;
   readonly suspensionForm: Locator;
   readonly suspensionsTable: Locator;
+  /** The on-hire register; its caption starts with "As of <date>". */
+  readonly onHireTable: Locator;
 
   constructor(private readonly page: Page) {
+    this.onHireTable = page.getByRole("table", { name: /^As of/ });
     this.suspensionForm = page.getByRole("form", { name: "Record a suspension" });
     this.suspensionsTable = page.getByRole("table", { name: "Hire suspensions" });
     this.heading = page.getByRole("heading", { level: 1 });
@@ -48,6 +51,36 @@ export class SitePage {
     const form = this.page.getByRole("form", { name: `Record collection for ${jobNo}` });
     await form.getByLabel("Collection no").fill(collectionNo);
     await form.getByRole("button", { name: "Record collection" }).click();
+  }
+
+  /** A row of the on-hire register, found by the item's fleet code. */
+  onHireRow(fleetCode: string): Locator {
+    return this.onHireTable.getByRole("row").filter({ hasText: fleetCode });
+  }
+
+  onHireCell(
+    fleetCode: string,
+    column:
+      | "Job no"
+      | "Since"
+      | "Days on hire"
+      | "Working days"
+      | "Cost to date"
+      | "Billed"
+      | "Not yet billed"
+      | "Status",
+  ): Locator {
+    const index = [
+      "Job no",
+      "Since",
+      "Days on hire",
+      "Working days",
+      "Cost to date",
+      "Billed",
+      "Not yet billed",
+      "Status",
+    ].indexOf(column);
+    return this.onHireRow(fleetCode).getByRole("cell").nth(index);
   }
 
   async recordSuspension(suspension: {

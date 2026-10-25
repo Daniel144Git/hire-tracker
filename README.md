@@ -8,34 +8,38 @@ Built as a test-automation portfolio project: the application is real, the test 
 
 ## Run locally
 
-Requires Node.js 24 (see `.nvmrc`; with nvm, run `nvm use`).
+Requires Node.js 24 (see `.nvmrc`). With nvm, run `nvm use` in the project folder first: the SQLite driver is built for Node 24.
 
 ```bash
+nvm use
 npm install
 npx playwright install chromium
 cp .env.example .env
-npm run db:migrate
-npm run db:seed
+npm run db:reset
 npm run dev
 ```
 
-Then open http://localhost:3000/sites, or http://localhost:3000/invoices to enter an invoice. The seed adds fictional demo data: the supplier Apex Plant Hire, three sites and two hire orders on RVS - Riverside Tower.
+Then open http://localhost:3000. `npm run db:reset` creates the database with fictional demo data (see below); run it again at any time to start over.
 
-The API and E2E tests build the app and start their own production server on port 3100, with a separate database (`prisma/test.db`) recreated empty for every run, so they never touch your demo data and never depend on dev hot reload.
+The API and E2E tests build the app and start their own production server on port 3100, with a separate database (`prisma/test.db`) recreated for every run, so they never touch your data and never depend on dev hot reload.
 
-| Command                | What it does                                                     |
-| ---------------------- | ---------------------------------------------------------------- |
-| `npm run dev`          | Starts the development server                                    |
-| `npm run build`        | Builds the production app                                        |
-| `npm run lint`         | Runs ESLint                                                      |
-| `npm run typecheck`    | Generates Next.js route types, then runs the TypeScript compiler |
-| `npm run format`       | Formats all files with Prettier                                  |
-| `npm run format:check` | Fails if any file is not formatted                               |
-| `npm test`             | Runs the unit tests (Vitest)                                     |
-| `npm run test:watch`   | Runs the unit tests in watch mode                                |
-| `npm run test:api`     | Runs the API tests (Playwright, no browser)                      |
-| `npm run test:e2e`     | Runs the end-to-end UI tests (Playwright, Chromium)              |
-| `npm run test:report`  | Opens the last Playwright HTML report                            |
+| Command                   | What it does                                                        |
+| ------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`             | Starts the development server                                       |
+| `npm run build`           | Builds the production app                                           |
+| `npm run lint`            | Runs ESLint                                                         |
+| `npm run typecheck`       | Generates Next.js route types, then runs the TypeScript compiler    |
+| `npm run format`          | Formats all files with Prettier                                     |
+| `npm run format:check`    | Fails if any file is not formatted                                  |
+| `npm test`                | Runs the unit tests (Vitest)                                        |
+| `npm run test:watch`      | Runs the unit tests in watch mode                                   |
+| `npm run test:api`        | Runs the API tests (Playwright, no browser)                         |
+| `npm run test:e2e`        | Runs the end-to-end UI tests (Playwright, Chromium)                 |
+| `npm run test:report`     | Opens the last Playwright HTML report                               |
+| `npm run db:reset`        | Recreates the development database with the demo data               |
+| `npm run db:migrate`      | Applies database migrations (and creates one after a schema change) |
+| `npm run db:seed`         | Adds the demo data to an empty database                             |
+| `npm run db:test:prepare` | Recreates the test database (the tests run it themselves)           |
 
 ## API
 
@@ -59,6 +63,9 @@ All endpoints take and return JSON. Money is in pounds, dates are `YYYY-MM-DD`. 
 | `POST /api/invoices/:id/check`                 | Run the reconciliation checks again and return the findings                                          | 404                           |
 | `GET, POST /api/sites/:id/suspensions`         | List or record site suspensions (free days credited); re-checks the site's invoices                  | 400, 404                      |
 | `GET /api/reports/discrepancies?month=YYYY-MM` | The month's findings, totals and orders on hire with no invoice                                      | 400                           |
+| `GET /api/sites/:id/on-hire?asOf=YYYY-MM-DD`   | The site's on-hire register: items on site, days on hire, cost and billed to date                    | 400, 404                      |
+| `PATCH /api/invoices/:id`                      | Change the payment status (paid, queried, credited) or the check status; nothing else                | 400, 404                      |
+| `GET /api/payments/due?asOf=YYYY-MM-DD`        | Unpaid invoices: overdue, due in 7 and 14 days, later; queried ones apart; totals per site           | 400                           |
 
 ## Reconciliation checks
 
@@ -84,6 +91,29 @@ Every invoice is checked as soon as it is saved, and again when something it dep
 
 The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists every finding on the month's invoices, the amount overcharged on open findings, and the orders on hire with no invoice (R4). R9 (service events) and R11 (supplier statements) come in later phases.
 
+## Demo data
+
+`npm run db:reset` loads Apex Plant Hire with 3 sites, 4 hire orders and 10 invoices from July to September 2026. The data goes through the app's own services, and it deliberately contains supplier mistakes. An API test checks that every implemented rule finds at least one of them.
+
+| Invoice                         | Site     | Mistake                                                              | Found by     |
+| ------------------------------- | -------- | -------------------------------------------------------------------- | ------------ |
+| APX-20703, APX-20819, APX-20820 | NGW, RVS | The same outrigger adaptor at £3.50/week and £3.75/week              | R12          |
+| APX-20817                       | RVS      | Lift billed at £52.50/week instead of £50.00                         | R6           |
+| APX-20817                       | RVS      | "Last invoice" APX-20799 is not the previous invoice                 | R14          |
+| APX-20817                       | RVS      | Pipe groover no longer billed, with no return invoice                | R15          |
+| APX-20819                       | RVS      | Platform billed from 10 Aug, delivered 13 Aug                        | R2           |
+| APX-20819                       | RVS      | Billed to 31 Aug after the 27 Aug off-hire, then credited by C-20901 | R1, resolved |
+| APX-20819                       | RVS      | VAT £9.01 on a £45.00 delivery                                       | R10          |
+| APX-20820                       | NGW      | No credit for the 10-day site suspension                             | R16          |
+| APX-20820                       | NGW      | Generator APX-GN-0099 is on no hire order                            | R8, R15      |
+| APX-20820                       | NGW      | Damage waiver £50.00 instead of £47.67                               | R13          |
+| APX-20830                       | MLP      | Collection charged twice                                             | R17          |
+| APX-20905                       | RVS      | Lift billed again for 15-31 Aug, at the wrong rate                   | R3, R5       |
+| APX-20931                       | MLP      | Continuation after the return invoice, a month after off-hire        | R7, R1       |
+| September report                | RVS, NGW | J100101 and J100301 on hire with no September invoice                | R4           |
+
+July is paid, APX-20820 is queried, and the rest is unpaid, which fills the payments page.
+
 ## Continuous integration
 
 GitHub Actions runs on every pull request and on every push to `main` (`.github/workflows/ci.yml`):
@@ -95,4 +125,4 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
 
-Status: Phase 4 in progress: the reconciliation checks and the monthly discrepancy report are in; the on-hire register and the due-date and payment view are next. Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.
+Status: Phase 4 complete (reconciliation engine, discrepancy report, on-hire register, payments). Next: phase 5, invoice PDF upload with AI extraction, site recognition and supplier statements (R11). Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.

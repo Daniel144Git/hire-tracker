@@ -45,7 +45,7 @@ The project is inspired by real procurement work, but **all data in this repo is
 ### Later (phases 5-8)
 
 8. Upload invoice PDF, AI extraction of the lines (mock in tests, an AI API for real use), review screen. Statement import and R11.
-9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export.
+9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export. The monthly export also groups the invoice PDFs by site: a ZIP with one folder per site (e.g. `RVS - Riverside Tower/`), each holding that site's invoices and a CSV summary (requested by Florin; Google Drive folders are an option if the connector is set up).
 10. Service events and the "service billed but not recorded" check.
 11. Draft a query email to the hire company from the discrepancy report.
 12. Alerts: item on hire longer than N days, cost to date above a threshold (time to off-hire or buy).
@@ -149,6 +149,12 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - Monthly report: site × trade, net and gross, plus the list of lines behind each cell.
 - Yearly report: per site per month.
 
+### 4.5 Notes from Florin for phase 5 (to confirm before building)
+
+- **"Our ref" is the key.** Florin expects the "Our ref" printed on the invoices to be the key that identifies the hire order, as in the spreadsheet. To confirm: is it our own order number (the spreadsheet's "order number" column) or the supplier's job / contract number? If it is our order number, `HireOrder` gets an `orderRef` field, and line linking uses it before the supplier's job number.
+- **Items and E-codes.** Under each order the invoice lists the items, and many of them carry an E-code, the same code the spreadsheet holds. An E-code can change from one monthly continuation invoice to the next, when the item is swapped or the product changes. To confirm: is the E-code the fleet code (the id of the physical item) or a separate product code printed next to it? Either way the app keeps the history of an item's codes (old code, new code, from which invoice), so that R15 shows a change of code as a swap to confirm, not as one item gone plus an unknown one billed.
+- **Acceptance test with real documents.** The final test of phase 5 runs the invoices of the previous months through the app, and every supplier statement must match them (R11): every statement line found, every amount equal, nothing held that is not on a statement. The real invoices and statements stay on Florin's machine (a git-ignored folder) or in the private deployment (section 9). They are never committed and never used in CI.
+
 ## 5. Suggested data model
 
 - `Supplier`: id, name, accountNo, rateUnit (`WEEK_5_WORKING_DAYS` default), chargeWeekends, chargeBankHolidays, minChargeDays, damageWaiverPct, paymentTerms (`END_OF_NEXT_MONTH` | `NET_N`), paymentTermsDays?
@@ -202,6 +208,14 @@ This may be refined; changes go in this file.
 - R17 recognises "collect" and "deliver" in transport descriptions and flags only the later of two charges for the same order.
 - R4 is not an invoice check: it runs for the monthly report, on all orders on hire for at least one working day of the month, against the hire periods billed for them.
 - The report sums the positive differences of open findings, in whole pence.
+
+**Implemented in Phase 4c:** the on-hire register, due dates and payments, and the demo data.
+
+- On-hire register per site (`GET /api/sites/:id/on-hire?asOf=`): every item of an order on hire, or off-hired and waiting for collection, with calendar and working days on hire, cost to date at the agreed rate, billed to date (credits included) and not yet billed. `asOf` defaults to today; it is a parameter so the register can be tested for any date.
+- Payments (`GET /api/payments/due?asOf=`): unpaid invoices grouped as overdue, due in 0 to 7 days, 8 to 14 days and later; queried invoices on hold, apart; credit notes and paid or credited invoices left out; totals per site, the site being that of the invoice's first linked order.
+- `PATCH /api/invoices/:id` changes only `paymentStatus` and `checkStatus`: the invoice itself stays as printed.
+- R1 and R2 on the same line each report only their part of the overcharge (R1 cuts the period at the off-hire date only, R2 at the start only), so the report never counts the same pounds twice.
+- The seed creates the demo data through the services, so every check runs on it; the test database is seeded too, and an API test proves every implemented check has an example.
 
 ## 6. Tech stack
 

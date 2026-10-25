@@ -18,7 +18,8 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:test:prepare": "node scripts/reset-test-db.mjs"
+    "db:test:prepare": "node scripts/reset-test-db.mjs",
+    "db:reset": "node scripts/reset-dev-db.mjs"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "7.10.1",

@@ -76,3 +76,18 @@ export const invoiceCreateSchema = z
 
 export type InvoiceLineInput = z.infer<typeof invoiceLineSchema>;
 export type InvoiceCreateInput = z.infer<typeof invoiceCreateSchema>;
+
+export const PAYMENT_STATUSES = ["UNPAID", "PAID", "QUERIED", "CREDITED"] as const;
+export const CHECK_STATUSES = ["NOT_CHECKED", "CHECKED", "QUERIED"] as const;
+
+/** Only the statuses of an invoice can change; its contents stay exactly as printed. */
+export const invoiceUpdateSchema = z
+  .strictObject({
+    paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+    checkStatus: z.enum(CHECK_STATUSES).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
+export type InvoiceUpdateInput = z.infer<typeof invoiceUpdateSchema>;

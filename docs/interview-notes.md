@@ -78,3 +78,12 @@ What I can explain about this project, phase by phase.
 - **Debugging a flaky environment properly.** A full E2E run failed with pages reloading in a loop. I reproduced it outside the tests, ruled out hypotheses one by one with measurements (file writes, first compiles, two config flags), found it was a known Next.js 16.4 Turbopack regression triggered when an API route compiles before a page opens, and turned off the dev cache. It is logged as issue #7 with steps, expected, actual and the upstream link, and fixed with a regression test that fails without the setting.
 - **Test what you ship.** Playwright now always runs against a production build (`next build` + `next start`, about 4 seconds), locally as in CI, so no test depends on dev hot reload.
 - **Locators again.** `getByLabel("Month")` also matched "Choose a month" and "Findings on the month's"; `exact: true` fixed it. Strict mode made the ambiguity a clear failure instead of a wrong click.
+
+## Phase 4c: on-hire register, payments and demo data
+
+- **Time as a parameter.** The register and the due list take `asOf` (default today). Pure functions with an explicit date are deterministic, so unit tests use fixed dates; the one E2E test that needs "today" compares the page with the API's answer for the same day instead of hard-coding numbers.
+- **Boundaries tested on purpose.** Due today, in exactly 7 days, in 8, in exactly 14 and in 15 days each have a test; so do an item delivered after the date asked for and an item off-hired but not yet collected.
+- **The invoice stays as printed.** The status update accepts only `paymentStatus` and `checkStatus`; an API test proves an attempt to change the amount is a 400 and the amount is unchanged.
+- **Demo data that proves the checks.** The seed goes through the same services as the app, contains one deliberate supplier mistake per check, and an API test fails if any implemented check stops finding its example. A README table maps each mistake to its check.
+- **Designing the demo found a real bug.** A line billed both before delivery and after off-hire was counted twice in the report, once by R2 and once by R1. A failing test first, then each check reports only its own part, and the parts add up to the total.
+- **Safety in scripts.** The database reset scripts refuse to delete any file other than the dev or test database they are meant for.
