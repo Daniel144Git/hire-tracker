@@ -119,8 +119,21 @@ describe("reconcileStatement (R11): the supplier's statement against our invoice
     ["paid", { paymentStatus: "PAID" as const }],
     ["credited", { paymentStatus: "CREDITED" as const }],
     ["dated after the statement", { date: "2026-09-03" }],
+    // Raised the day the statement was printed: it may not be on it yet.
+    ["dated the day of the statement", { date: "2026-09-02" }],
   ])("does not expect an invoice that is %s on the statement", (_case, overrides) => {
     expect(reconcileStatement(statement([]), [invoice(overrides)]).problems).toEqual([]);
+  });
+
+  it("checks payments only on the supplier's latest statement", () => {
+    // An older statement listed the invoice while it was still open; it was paid since.
+    const result = reconcileStatement(
+      statement([{ invoiceNo: "30451207", amount: 665.28 }]),
+      [invoice({ paymentStatus: "PAID" })],
+      { latest: false },
+    );
+
+    expect(result.problems).toEqual([]);
   });
 
   it("matches invoice numbers whatever their case or spaces", () => {
