@@ -184,6 +184,14 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - **Marking paid.** "Not on the statement" on an unpaid invoice means paid or settled, so one action marks them paid; then older statements stop reporting them, and the latest one reports any we marked paid by mistake.
 - **Acceptance test with the real documents (local only):** 269 invoices and the seven statements from March to October imported through the API. Every one of the 325 statement lines is an invoice in Hire Tracker with the same amount, except 22 invoices from January 2026, before the first month of documents; every invoice held is on at least one statement. After marking paid from the October statement, every statement matches, and the 40 invoices left unpaid are exactly the 40 on the October statement.
 
+**Implemented in Phase 6:**
+
+- **Month of an invoice:** the month of its date, as on the real cost allocation tabs (invoices dated 28 February are in FEB).
+- **Trade of a line:** the line's own trade, else its order's; otherwise "No trade" (UNASSIGNED). An invoice with no site is shown as "No site". Nothing is guessed.
+- **Reports add up to the invoices:** `linesWithInvoiceVat` spreads the penny difference of VAT rounded once on the total over the largest lines, so per-site and per-trade totals add up to the printed invoices (4.3). Sums are kept in pence.
+- **Exports:** CSV (every line), Excel written directly as a minimal .xlsx (a ZIP of XML, numbers as numbers, no library beyond `fflate`), and the ZIP of invoice PDFs with one folder per site and a summary CSV in each (Florin's request). Text that a spreadsheet could run as a formula is written as text.
+- **Checked locally on the real August invoices:** 40 invoices, £REDACTED gross, the ZIP with one folder per site and every PDF in it.
+
 ## 5. Suggested data model
 
 - `Supplier`: id, name, accountNo, rateUnit (`WEEK_5_WORKING_DAYS` default), chargeWeekends, chargeBankHolidays, minChargeDays, damageWaiverPct, paymentTerms (`END_OF_NEXT_MONTH` | `NET_N`), paymentTermsDays?
