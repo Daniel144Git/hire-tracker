@@ -10,6 +10,11 @@ import {
   type InvoiceLineInput,
 } from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  assertUploadExists,
+  keepUploadWithInvoice,
+  readInvoiceFile,
+} from "@/server/files/invoice-files";
 import { loadOrdersForLinking, resolveInvoiceSite } from "./linking";
 import { checkInvoice, recheckRelatedInvoices, toFindingDto } from "./reconciliation";
 
@@ -70,6 +75,8 @@ function headerDto(invoice: InvoiceSummaryRow | InvoiceDetailRow) {
     gross: fromPence(invoice.grossPence),
     checkStatus: invoice.checkStatus,
     paymentStatus: invoice.paymentStatus,
+    /** True when the invoice's PDF is kept: GET /api/invoices/:id/file. */
+    hasFile: invoice.filePath !== null,
   };
 }
 
@@ -135,7 +142,8 @@ export async function getInvoice(id: string): Promise<InvoiceDto> {
  * unless given, and every line is linked to a hire order and item where possible.
  */
 export async function createInvoice(body: unknown): Promise<InvoiceDto> {
-  const { lines, net, vat, gross, ...input } = invoiceCreateSchema.parse(body);
+  const { lines, net, vat, gross, uploadId, ...input } = invoiceCreateSchema.parse(body);
+  if (uploadId) await assertUploadExists(uploadId);
 
   const supplier = await db.supplier.findUnique({ where: { id: input.supplierId } });
   if (!supplier) {
@@ -183,6 +191,11 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
     },
   });
 
+  if (uploadId) {
+    const filePath = await keepUploadWithInvoice(uploadId, invoice.id);
+    await db.invoice.update({ where: { id: invoice.id }, data: { filePath } });
+  }
+
   // Check the new invoice, then the other invoices of the same orders and job: a credit note
   // can close an R1 finding, a late invoice can repair the chain (R14) on a later one.
   await resolveInvoiceSite(invoice.id);
@@ -199,6 +212,18 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
     exceptInvoiceId: invoice.id,
   });
   return getInvoice(invoice.id);
+}
+
+/** GET /api/invoices/:id/file: the invoice's PDF, when it was uploaded. */
+export async function getInvoiceFile(
+  id: string,
+): Promise<{ number: string; bytes: Uint8Array<ArrayBuffer> }> {
+  const invoice = await db.invoice.findUnique({
+    where: { id },
+    select: { number: true, filePath: true },
+  });
+  if (!invoice?.filePath) throw new NotFoundError("File of invoice", id);
+  return { number: invoice.number, bytes: await readInvoiceFile(invoice.filePath, id) };
 }
 
 /** PATCH /api/invoices/:id: payment status (paid, queried...) and check status. */

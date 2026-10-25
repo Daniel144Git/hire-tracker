@@ -13,6 +13,13 @@ if (!url.endsWith("test.db")) {
 for (const suffix of ["", "-journal", "-wal", "-shm"]) {
   rmSync(`${TEST_DB_FILE}${suffix}`, { force: true });
 }
+
+// The invoice PDFs the previous run uploaded.
+const filesDir = process.env.INVOICE_FILES_DIR ?? "storage/test-invoice-files";
+if (!/(^|\/)test-[^/]*$/.test(filesDir)) {
+  throw new Error(`Refusing to empty "${filesDir}": the test files folder must be named test-*`);
+}
+rmSync(filesDir, { recursive: true, force: true });
 const env = { ...process.env, DATABASE_URL: url };
 execSync("npx prisma migrate deploy", { stdio: "inherit", env });
 execSync("npx prisma db seed", { stdio: "inherit", env });

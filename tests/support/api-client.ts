@@ -88,6 +88,16 @@ export interface Invoice {
   paymentStatus: string;
   lines: InvoiceLine[];
   findings: Finding[];
+  hasFile: boolean;
+}
+
+/** What POST /api/invoices/extract returns: a draft invoice read from a PDF. */
+export interface Extraction {
+  uploadId: string;
+  layout: "despatch" | "contract" | null;
+  supplier: { id: string; name: string } | null;
+  invoice: (Record<string, unknown> & { number?: string; lines: Record<string, unknown>[] }) | null;
+  warnings: string[];
 }
 
 /**
@@ -156,6 +166,15 @@ export class ApiClient {
     const response = await this.request.get(`/api/invoices/${id}`);
     expect(response.status(), `GET invoice ${id}`).toBe(200);
     return (await response.json()) as Invoice;
+  }
+
+  /** Sends a PDF to be read, as a browser form would. Nothing is saved as an invoice. */
+  async extractPdf(pdf: Uint8Array, name = "invoice.pdf"): Promise<Extraction> {
+    const response = await this.request.post("/api/invoices/extract", {
+      multipart: { file: { name, mimeType: "application/pdf", buffer: Buffer.from(pdf) } },
+    });
+    expect(response.status(), `POST extract: ${await response.text()}`).toBe(201);
+    return (await response.json()) as Extraction;
   }
 
   private async post<T>(url: string, data: unknown, expectedStatus = 201): Promise<T> {

@@ -36,7 +36,7 @@ export const invoiceLineSchema = z
 
 export const invoiceCreateSchema = z
   .strictObject({
-    supplierId: z.string().min(1, "Required"),
+    supplierId: z.string({ error: "Required" }).min(1, "Required"),
     number: identifierSchema(40),
     date: isoDateSchema,
     /** Left out: calculated from the supplier's payment terms. */
@@ -44,7 +44,7 @@ export const invoiceCreateSchema = z
     type: z.enum(INVOICE_TYPES),
     isCreditNote: z.boolean().default(false),
     jobNo: identifierSchema(40).optional(),
-    /** "Our ref": our own order number, the key to the hire order. */
+    /** Our own order number, when the invoice prints it: the key to the hire order. */
     orderRef: identifierSchema(40).optional(),
     /** Delivery address printed on the invoice: helps recognise the site. */
     deliveryAddress: textSchema(300).optional(),
@@ -55,6 +55,8 @@ export const invoiceCreateSchema = z
     vat: moneySchema,
     gross: moneySchema,
     lines: z.array(invoiceLineSchema).min(1, "An invoice needs at least one line").max(200),
+    /** The PDF read with POST /api/invoices/extract: kept with the invoice. */
+    uploadId: z.uuid("Unknown upload").optional(),
   })
   .superRefine((invoice, ctx) => {
     const datesAreValid = [invoice.date, invoice.dueDate].every((date) => {

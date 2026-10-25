@@ -9,17 +9,27 @@ import { CHARGE_TYPE_LABEL, INVOICE_TYPE_LABEL } from "../format";
 
 interface Props {
   suppliers: { id: string; name: string }[];
+  /** Field values to start from, e.g. an invoice read from a PDF. */
+  initialValues?: Record<string, string>;
+  /** The PDF the invoice was read from: kept with the invoice when it is saved. */
+  uploadId?: string;
+}
+
+/** How many line fieldsets the initial values fill: "lines.2.net" means three lines. */
+function lineCountOf(values: Record<string, string>): number {
+  const indexes = Object.keys(values).map((name) => /^lines\.(\d+)\./.exec(name)?.[1]);
+  return Math.max(0, ...indexes.filter((index) => index !== undefined).map(Number)) + 1;
 }
 
 const secondaryButtonClass = "rounded border border-gray-500 px-3 py-1 font-medium";
 
-export function InvoiceForm({ suppliers }: Props) {
+export function InvoiceForm({ suppliers, initialValues = {}, uploadId }: Props) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialFormState);
   // Each line has a stable key, so removing line 2 of 3 does not mix up the inputs of line 3.
-  const [lineKeys, setLineKeys] = useState([0]);
-  const [nextKey, setNextKey] = useState(1);
+  const [lineKeys, setLineKeys] = useState(() => [...Array(lineCountOf(initialValues)).keys()]);
+  const [nextKey, setNextKey] = useState(lineKeys.length);
   const errors = state.fieldErrors ?? {};
-  const values = state.values ?? {};
+  const values = state.values ?? initialValues;
 
   if (suppliers.length === 0) return <p>Add a supplier first.</p>;
 
@@ -36,6 +46,7 @@ export function InvoiceForm({ suppliers }: Props) {
 
   return (
     <form action={action} aria-label="Invoice" className="flex flex-col gap-6" noValidate>
+      {uploadId && <input type="hidden" name="uploadId" value={uploadId} />}
       <fieldset className="grid gap-3 sm:grid-cols-3">
         <legend className="mb-2 text-lg font-medium">Header</legend>
         <SelectField
@@ -45,6 +56,7 @@ export function InvoiceForm({ suppliers }: Props) {
           defaultValue={values.supplierId}
           error={errors.supplierId}
         >
+          <option value="">Choose a supplier</option>
           {suppliers.map((supplier) => (
             <option key={supplier.id} value={supplier.id}>
               {supplier.name}
@@ -67,7 +79,7 @@ export function InvoiceForm({ suppliers }: Props) {
         </SelectField>
         {field("date", "Invoice date", { type: "date" })}
         {field("dueDate", "Due date (optional)", { type: "date" })}
-        {field("orderRef", "Our ref (our order number)")}
+        {field("orderRef", "Our order number (optional)")}
         {field("jobNo", "Job number")}
         {field("lastInvoiceNo", "Last invoice number (optional)")}
         {field("customerRef", "Customer reference (optional)")}
