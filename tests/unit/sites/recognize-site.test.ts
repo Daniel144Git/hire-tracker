@@ -59,6 +59,44 @@ describe("recognizeSite: which site an invoice is for, from how the supplier wro
     expect(result).toEqual({ siteId: "ngw", matchedBy: "POSTCODE", candidates: ["ngw"] });
   });
 
+  it.each([
+    ["a recorded spelling", "Brookfield Build Ltd, Riverside Twr 2-6 River Walk, Northport", "rvs"],
+    ["the site name", "Brookfield Build Ltd, NORTHGATE WHARF, Wharf Road", "ngw"],
+  ])(
+    "finds %s in the delivery address when the reference is something else",
+    (_what, deliveryAddress, siteId) => {
+      expect(recognizeSite({ customerRef: "REDACTED", deliveryAddress }, sites)).toEqual({
+        siteId,
+        matchedBy: "ADDRESS",
+        candidates: [siteId],
+      });
+    },
+  );
+
+  it("trusts the reference over the delivery address", () => {
+    const result = recognizeSite(
+      { customerRef: "Riverside", deliveryAddress: "Northgate Wharf, Wharf Road" },
+      sites,
+    );
+
+    expect(result).toEqual({ siteId: "rvs", matchedBy: "NAME", candidates: ["rvs"] });
+  });
+
+  it("does not guess when the delivery address names two sites", () => {
+    const result = recognizeSite(
+      { deliveryAddress: "Riverside Tower, opposite Northgate Wharf" },
+      sites,
+    );
+
+    expect(result).toEqual({ siteId: null, matchedBy: null, candidates: ["rvs", "ngw"] });
+  });
+
+  it("does not match part of a word in the delivery address", () => {
+    const withMill = sites.map((s) => (s.id === "mlp" ? { ...s, aliases: ["MILL"] } : s));
+
+    expect(recognizeSite({ deliveryAddress: "Millbrook Estate" }, withMill).siteId).toBeNull();
+  });
+
   it("prefers an alias the user recorded over a guess from the name", () => {
     const withAlias = sites.map((s) => (s.id === "ngw" ? { ...s, aliases: ["RIVERSIDE"] } : s));
 

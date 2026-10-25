@@ -31,6 +31,25 @@ describe("R8: fleet code not on an order of this job and site", () => {
     ]);
   });
 
+  it("does not flag a credit for a fleet code on no order: nothing is being paid for it", () => {
+    // A suspension credit printed under an item has the item's fleet code and a negative amount.
+    const ctx = context({
+      invoice: invoice({
+        lines: [
+          hireLine({
+            fleetCode: "APX-ZZ-0000",
+            net: -121.28,
+            vat: -24.26,
+            hireItemId: null,
+            linkProblem: "UNKNOWN_FLEET_CODE",
+          }),
+        ],
+      }),
+    });
+
+    expect(fleetCodeNotOnOrder(ctx)).toEqual([]);
+  });
+
   it("flags a fleet code that is on more than one hire order", () => {
     const ctx = context({
       invoice: invoice({
