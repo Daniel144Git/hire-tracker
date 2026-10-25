@@ -41,6 +41,43 @@ describe("R17: transport charged more than once on the same order", () => {
     );
   });
 
+  it("does not count a transport supplement as a second charge", () => {
+    // Some suppliers charge a supplement next to each delivery or collection.
+    const ctx = context({
+      invoice: invoice({
+        lines: [collection("c1", 2), collection("s1", 3, "Transport Supplement Collection")],
+      }),
+    });
+
+    expect(transportChargedTwice(ctx)).toEqual([]);
+  });
+
+  it("does not flag deliveries on different days: different trips", () => {
+    const delivery = (id: string, position: number, date: string) => ({
+      ...collection(id, position, "Transport Tools Delivery"),
+      periodFrom: date,
+      periodTo: date,
+    });
+    const ctx = context({
+      invoice: invoice({
+        lines: [delivery("d1", 2, "2026-01-22"), delivery("d2", 3, "2026-01-29")],
+      }),
+    });
+
+    expect(transportChargedTwice(ctx)).toEqual([]);
+  });
+
+  it("flags the same delivery twice on the same day", () => {
+    const delivery = (id: string, position: number) => ({
+      ...collection(id, position, "Transport Tools Delivery"),
+      periodFrom: "2026-01-22",
+      periodTo: "2026-01-22",
+    });
+    const ctx = context({ invoice: invoice({ lines: [delivery("d1", 2), delivery("d2", 3)] }) });
+
+    expect(transportChargedTwice(ctx).map((f) => f.invoiceLineId)).toEqual(["d2"]);
+  });
+
   it("does not flag one delivery and one collection", () => {
     const ctx = context({
       invoice: invoice({ lines: [collection("d", 2, "Delivery"), collection("c", 3)] }),

@@ -81,7 +81,16 @@ describe("despatch layout", () => {
         net: 12,
         vat: 2.4,
       },
-      { description: "Transport Collection", qty: 1, chargeType: "TRANSPORT", net: 25, vat: 5 },
+      {
+        description: "Transport Collection",
+        qty: 1,
+        // The day of the trip, so two trips on different days are not the same charge (R17).
+        periodFrom: "2026-09-02",
+        periodTo: "2026-09-02",
+        chargeType: "TRANSPORT",
+        net: 25,
+        vat: 5,
+      },
       {
         description: "Pipe stand roller head",
         fleetCode: "M1001-3003",
