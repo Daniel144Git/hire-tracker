@@ -6,6 +6,8 @@ import { NotFoundError } from "@/server/errors";
 import { listOrders, type OrderDto } from "@/server/services/orders";
 import { getSite, type SiteDto } from "@/server/services/sites";
 import { listSuppliers } from "@/server/services/suppliers";
+import { listSuspensions } from "@/server/services/suspensions";
+import { SuspensionForm } from "./suspension-form";
 import { CreateOrderForm } from "./create-order-form";
 import { CollectionForm, OffHireForm } from "./order-forms";
 
@@ -25,7 +27,11 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
   const site = await findSite(id);
-  const [orders, suppliers] = await Promise.all([listOrders({ siteId: id }), listSuppliers()]);
+  const [orders, suppliers, suspensions] = await Promise.all([
+    listOrders({ siteId: id }),
+    listSuppliers(),
+    listSuspensions(id),
+  ]);
 
   return (
     <>
@@ -46,6 +52,38 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
         ) : (
           <OrdersTable orders={orders} />
         )}
+      </section>
+
+      <section aria-labelledby="suspensions-heading" className="flex flex-col gap-3">
+        <h2 id="suspensions-heading" className="text-lg font-medium">
+          Hire suspensions
+        </h2>
+        {suspensions.length === 0 ? (
+          <p>No suspensions recorded for this site.</p>
+        ) : (
+          <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
+            <caption className="sr-only">Hire suspensions</caption>
+            <thead>
+              <tr className="border-b border-gray-400">
+                <th scope="col">Period</th>
+                <th scope="col">Free days</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {suspensions.map((suspension) => (
+                <tr key={suspension.id} className="border-b border-gray-200">
+                  <th scope="row" className="py-2 font-normal whitespace-nowrap">
+                    {suspension.periodFrom} to {suspension.periodTo}
+                  </th>
+                  <td>{suspension.freeDays}</td>
+                  <td>{suspension.note ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <SuspensionForm siteId={site.id} />
       </section>
 
       <section aria-labelledby="new-order-heading" className="flex flex-col gap-3">

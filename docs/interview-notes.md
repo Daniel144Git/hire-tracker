@@ -66,3 +66,15 @@ What I can explain about this project, phase by phase.
 - **I found a bug in my own check with a test.** R5 skipped every first-month line billed from the 1st when the order started on the Monday after. I wrote the failing test first, then fixed it.
 - **I found a bug the suite could not see.** `npm run dev` reloaded pages in an endless loop because of an explicit `distDir`, but the test server used a different folder, so every test was green. I logged it as GitHub issue #5 with steps, expected and actual, fixed it, and added a regression test that fails on the old config. Lesson: test environments that differ from what users run can hide bugs; a manual look at the real app still matters.
 - **The critical E2E flow from the brief.** Off-hire an item on the site page, enter the next invoice by hand, and see the R1 finding with the overcharge.
+
+## Phase 4b: cross-invoice checks and the monthly report
+
+- **Checks that need history.** R6, R14 and R15 compare an invoice with the job's earlier invoices; R12 with the supplier's other orders; R16 with the site's suspensions. The context builder loads exactly that, and saving one invoice re-checks the invoices it can affect (same orders, same job). An API test shows R14 repaired automatically when the missing invoice is entered later.
+- **One mistake, one finding.** R5 steps aside when R6 reports a rate change, as it already does for R1 and R2. Each rule has a test proving it.
+- **Modelling choices written down.** R6 compares weekly rates, not amounts, so 21- and 23-day months compare; R15 messages end with "Confirm on site", because the truth is on site, not in the data. These go in the brief next to the rules.
+- **Pure logic tested at the lowest level.** The report totals are a pure function with unit tests (overcharges only, open only, added in pence); the API test only checks the wiring.
+- **Parallel-safe report tests.** A report covers all data, so each test uses a random far-future month and looks for its own rows with `toContainEqual`. A test that expected exactly one row failed because the report correctly listed other tests' orders: the test was wrong, not the app.
+- **Playwright has no `test.each`.** Parameterised tests are a `for` loop declaring one test per value.
+- **Debugging a flaky environment properly.** A full E2E run failed with pages reloading in a loop. I reproduced it outside the tests, ruled out hypotheses one by one with measurements (file writes, first compiles, two config flags), found it was a known Next.js 16.4 Turbopack regression triggered when an API route compiles before a page opens, and turned off the dev cache. It is logged as issue #7 with steps, expected, actual and the upstream link, and fixed with a regression test that fails without the setting.
+- **Test what you ship.** Playwright now always runs against a production build (`next build` + `next start`, about 4 seconds), locally as in CI, so no test depends on dev hot reload.
+- **Locators again.** `getByLabel("Month")` also matched "Choose a month" and "Findings on the month's"; `exact: true` fixed it. Strict mode made the ambiguity a clear failure instead of a wrong click.

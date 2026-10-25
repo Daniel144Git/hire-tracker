@@ -190,6 +190,19 @@ This may be refined; changes go in this file.
 - R13 treats a hire line not linked to an order as carrying damage waiver (the supplier's default).
 - Findings are recalculated on every run; resolving a finding by hand (query outcome) comes with the discrepancy report.
 
+**Implemented in Phase 4b:** checks R4, R6, R8, R12, R14, R15, R16, R17, site suspensions and the monthly discrepancy report.
+
+- The check context also holds the other invoices of the same job number, every item on the supplier's orders and the suspensions of the sites involved. Saving an invoice re-checks the invoices of the same orders and the same job; recording a suspension re-checks the site's invoices.
+- R6 compares weekly rates (net x 5 / (working days x qty)) with the item's most recent earlier billing, not amounts, so months with different numbers of working days are comparable; periods shorter than a week are skipped (the minimum charge distorts them). When R6 reports a line, R5 steps aside.
+- R8 uses the link problem recorded when the line was saved, plus a fleet code linked to an order at another site than the invoice's job. An unknown fleet code puts the whole charge at stake.
+- R12 compares item descriptions ignoring case and spacing. LOW: different rates can be legitimate.
+- R14 compares the printed "last invoice" with the latest earlier non-credit invoice of the same job number, of any type.
+- R15 compares a continuation invoice with the previous continuation invoice of the job. A missing fleet code is fine when its order is off-hired or a later return invoice bills it. A new fleet code is LOW. Every message ends with "Confirm on site".
+- R16: a `Suspension` (site, period, free days) expects, under each hire line of an overlapping period, a negative hire sub-line for the same item of free days x weekly rate / 5 x qty.
+- R17 recognises "collect" and "deliver" in transport descriptions and flags only the later of two charges for the same order.
+- R4 is not an invoice check: it runs for the monthly report, on all orders on hire for at least one working day of the month, against the hire periods billed for them.
+- The report sums the positive differences of open findings, in whole pence.
+
 ## 6. Tech stack
 
 - **TypeScript** everywhere.

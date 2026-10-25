@@ -12,7 +12,7 @@ import {
   type HireItemInput,
 } from "@/lib/schemas/order";
 import type { HireItem, Prisma } from "@/generated/prisma/client";
-import { recheckInvoicesForOrders } from "./reconciliation";
+import { recheckRelatedInvoices } from "./reconciliation";
 
 const ORDER_STATUSES = ["ON_HIRE", "OFF_HIRED", "COLLECTED"] as const;
 
@@ -139,7 +139,7 @@ export async function offHireOrder(id: string, body: unknown): Promise<OrderDto>
     include: orderInclude,
   });
   // R1 compares every invoice of this order with the off-hire date just entered.
-  await recheckInvoicesForOrders([id]);
+  await recheckRelatedInvoices({ orderIds: [id] });
   return toDto(updated);
 }
 

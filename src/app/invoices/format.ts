@@ -28,10 +28,18 @@ export const CHECK_LABEL: Record<string, string> = {
   R1: "Billed after off-hire",
   R2: "Billed before start of hire",
   R3: "Billed twice",
+  R4: "Month on hire with no invoice",
   R5: "Amount differs from agreed rate",
+  R6: "Rate changed since last month",
   R7: "Continuation after return",
+  R8: "Fleet code not on an order",
   R10: "VAT or totals",
+  R12: "Different rates for the same item",
   R13: "Damage waiver",
+  R14: "Broken invoice chain",
+  R15: "Item gone or new: confirm on site",
+  R16: "Suspension credit",
+  R17: "Transport charged twice",
 };
 
 export const SEVERITY_LABEL: Record<string, string> = {

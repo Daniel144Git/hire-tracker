@@ -76,6 +76,27 @@ describe("R5: amount differs from the agreed rate", () => {
     ]);
   });
 
+  it("leaves a rate that changed since last month to R6, so it is reported once", () => {
+    const july = invoice({
+      id: "invoice-july",
+      number: "INV-20700",
+      date: "2026-07-31",
+      lines: [
+        hireLine({
+          id: "july",
+          periodFrom: "2026-07-01",
+          periodTo: "2026-07-31",
+          net: 230,
+          vat: 46,
+        }),
+      ],
+    });
+
+    expect(
+      amountDiffersFromExpected(context({ invoice: billed(220.5), otherInvoices: [july] })),
+    ).toEqual([]);
+  });
+
   it("skips lines it cannot price: no linked item, no period, or a credit", () => {
     for (const overrides of [{ hireItemId: null }, { periodFrom: null, periodTo: null }]) {
       expect(amountDiffersFromExpected(context({ invoice: billed(218, overrides) }))).toEqual([]);

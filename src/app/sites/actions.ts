@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { readForm, toFormState, type FormState } from "@/server/form-state";
 import { createSite } from "@/server/services/sites";
 import { createOrder, offHireOrder, recordCollection } from "@/server/services/orders";
+import { createSuspension } from "@/server/services/suspensions";
 
 // Server Actions for the sites pages. Each one reads the form, calls the same service as the
 // REST API (so the rules are identical in the UI and the API), and returns a FormState.
@@ -74,5 +75,31 @@ export async function recordCollectionAction(
     return { status: "success", message: `${order.supplierJobNo} collected` };
   } catch (error) {
     return toFormState(error, values);
+  }
+}
+
+export async function createSuspensionAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { siteId, freeDays, ...values } = readForm(formData, [
+    "siteId",
+    "periodFrom",
+    "periodTo",
+    "freeDays",
+    "note",
+  ]);
+  try {
+    await createSuspension(siteId ?? "", {
+      ...values,
+      freeDays: freeDays === undefined ? undefined : Number(freeDays),
+    });
+    refresh();
+    return {
+      status: "success",
+      message: "Suspension recorded: the site's invoices were re-checked",
+    };
+  } catch (error) {
+    return toFormState(error, { ...values, ...(freeDays ? { freeDays } : {}) });
   }
 }

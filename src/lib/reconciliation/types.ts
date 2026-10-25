@@ -38,6 +38,8 @@ export interface CheckLine {
   vat: number;
   orderId: string | null;
   hireItemId: string | null;
+  /** Why the line could not be linked when it was saved (Phase 3). */
+  linkProblem: "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE" | null;
 }
 
 export interface CheckInvoice {
@@ -46,6 +48,10 @@ export interface CheckInvoice {
   date: IsoDate;
   type: "CONTINUATION" | "RETURN" | "SALE";
   isCreditNote: boolean;
+  /** Job number printed in the header: one hire order. */
+  jobNo: string | null;
+  /** "Last invoice" printed on the invoice: the previous invoice of the same job. */
+  lastInvoiceNo: string | null;
   net: number;
   vat: number;
   gross: number;
@@ -55,20 +61,45 @@ export interface CheckInvoice {
 export interface CheckOrder {
   id: string;
   supplierJobNo: string;
+  site: { id: string; code: string };
   startDate: IsoDate;
   offHireDate: IsoDate | null;
   damageWaiverApplies: boolean;
-  items: { id: string; fleetCode: string | null; weeklyRate: number }[];
+  items: { id: string; description: string; fleetCode: string | null; weeklyRate: number }[];
+}
+
+/** An item on any hire order of the supplier, for comparing rates across orders (R12). */
+export interface SupplierItem {
+  orderId: string;
+  supplierJobNo: string;
+  description: string;
+  weeklyRate: number;
+}
+
+/** A site suspension: free days the supplier must credit on every hire line of the period. */
+export interface CheckSuspension {
+  siteId: string;
+  siteCode: string;
+  periodFrom: IsoDate;
+  periodTo: IsoDate;
+  freeDays: number;
 }
 
 /** Everything a check may look at. Built from the database, but plain data, so checks are pure. */
 export interface ReconciliationContext {
   /** The invoice being checked. */
   invoice: CheckInvoice;
-  /** The hire orders its lines are linked to, by id. */
+  /** The hire orders its lines and its job number refer to, and those of related invoices, by id. */
   orders: Record<string, CheckOrder>;
-  /** Other invoices of the same supplier with lines on the same orders (history, credit notes). */
+  /**
+   * Other invoices of the same supplier on the same orders or the same job number: history,
+   * credit notes and return invoices.
+   */
   otherInvoices: CheckInvoice[];
+  /** Every item on the supplier's hire orders (R12). */
+  supplierItems: SupplierItem[];
+  /** Suspensions of the sites of these orders (R16). */
+  suspensions: CheckSuspension[];
   rules: ChargingRules & { damageWaiverPct: number };
   /** Differences up to this amount (pounds) are ignored by R5, R6, R12 and R13. */
   tolerance: number;

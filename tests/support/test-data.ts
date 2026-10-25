@@ -75,3 +75,29 @@ export function invoiceData(
     ...overrides,
   };
 }
+
+/**
+ * A random month far in the future, e.g. "2417-03", so a report test sees only its own
+ * invoices even when tests run in parallel or repeat.
+ */
+export function uniqueMonth(): string {
+  const [a, b] = randomBytes(2);
+  return `${2100 + ((a * 256 + b) % 800)}-${String((a % 12) + 1).padStart(2, "0")}`;
+}
+
+/** July 2026 for one item at £50.00/week: 23 working days = 4 wks 3 days = £230.00. */
+export function julyLine(
+  fleetCode: string | null | undefined,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    description: "Scissor lift 19ft electric",
+    fleetCode: fleetCode ?? undefined,
+    periodFrom: "2026-07-01",
+    periodTo: "2026-07-31",
+    chargeType: "HIRE",
+    net: 230,
+    vat: 46,
+    ...overrides,
+  };
+}

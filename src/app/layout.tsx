@@ -23,6 +23,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/invoices" className="underline-offset-4 hover:underline">
               Invoices
             </Link>
+            <Link href="/reports/discrepancies" className="underline-offset-4 hover:underline">
+              Discrepancies
+            </Link>
           </nav>
         </header>
         {children}

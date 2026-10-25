@@ -2,20 +2,38 @@ import { billedAfterOffHire } from "./checks/r01-billed-after-off-hire";
 import { billedBeforeStart } from "./checks/r02-billed-before-start";
 import { billedTwice } from "./checks/r03-billed-twice";
 import { amountDiffersFromExpected } from "./checks/r05-amount-differs";
+import { rateDrift } from "./checks/r06-rate-drift";
 import { continuationAfterReturn } from "./checks/r07-continuation-after-return";
+import { fleetCodeNotOnOrder } from "./checks/r08-fleet-code-not-on-order";
 import { vatAndTotals } from "./checks/r10-vat-and-totals";
+import { rateInconsistency } from "./checks/r12-rate-inconsistency";
 import { damageWaiverCheck } from "./checks/r13-damage-waiver";
+import { brokenContinuationChain } from "./checks/r14-broken-chain";
+import { itemTracking } from "./checks/r15-item-tracking";
+import { suspensionCredit } from "./checks/r16-suspension-credit";
+import { transportChargedTwice } from "./checks/r17-transport-twice";
 import type { Check, Finding, ReconciliationContext } from "./types";
 
-/** Every check the engine runs on an invoice. A new check is one file plus one line here. */
+/**
+ * Every check the engine runs on an invoice. A new check is one file plus one line here.
+ * R4 (missing months) works on orders, not on one invoice: see missing-periods.ts.
+ * R9 (service events) and R11 (supplier statements) come in later phases.
+ */
 export const CHECKS: readonly Check[] = [
   billedAfterOffHire,
   billedBeforeStart,
   billedTwice,
   amountDiffersFromExpected,
+  rateDrift,
   continuationAfterReturn,
+  fleetCodeNotOnOrder,
   vatAndTotals,
+  rateInconsistency,
   damageWaiverCheck,
+  brokenContinuationChain,
+  itemTracking,
+  suspensionCredit,
+  transportChargedTwice,
 ];
 
 const SEVERITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;

@@ -6,7 +6,7 @@ import { calculateDueDate } from "@/lib/invoices/due-date";
 import { linkInvoiceLine } from "@/lib/invoices/link-line";
 import { invoiceCreateSchema, type InvoiceLineInput } from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
-import { checkInvoice, recheckInvoicesForOrders, toFindingDto } from "./reconciliation";
+import { checkInvoice, recheckRelatedInvoices, toFindingDto } from "./reconciliation";
 
 export const invoiceFilterSchema = z.strictObject({
   supplierId: z.string().min(1).optional(),
@@ -169,18 +169,20 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
     },
   });
 
-  // Check the new invoice, then the other invoices of the same orders: a credit note can close
-  // an R1 finding on an earlier invoice.
+  // Check the new invoice, then the other invoices of the same orders and job: a credit note
+  // can close an R1 finding, a late invoice can repair the chain (R14) on a later one.
   await checkInvoice(invoice.id);
   const linkedOrderIds = await db.invoiceLine.findMany({
     where: { invoiceId: invoice.id, orderId: { not: null } },
     select: { orderId: true },
     distinct: ["orderId"],
   });
-  await recheckInvoicesForOrders(
-    linkedOrderIds.map((line) => line.orderId).filter((id) => id !== null),
-    invoice.id,
-  );
+  await recheckRelatedInvoices({
+    orderIds: linkedOrderIds.map((line) => line.orderId).filter((id) => id !== null),
+    jobNo: input.jobNo,
+    supplierId: supplier.id,
+    exceptInvoiceId: invoice.id,
+  });
   return getInvoice(invoice.id);
 }
 

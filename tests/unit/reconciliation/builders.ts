@@ -2,7 +2,9 @@ import type {
   CheckInvoice,
   CheckLine,
   CheckOrder,
+  CheckSuspension,
   ReconciliationContext,
+  SupplierItem,
 } from "@/lib/reconciliation/types";
 
 // Test data builders: each returns a valid default (the brief's example: a scissor lift at
@@ -12,10 +14,18 @@ export function order(overrides: Partial<CheckOrder> = {}): CheckOrder {
   return {
     id: "order-1",
     supplierJobNo: "J100101",
+    site: { id: "site-1", code: "RVS" },
     startDate: "2026-07-01",
     offHireDate: null,
     damageWaiverApplies: true,
-    items: [{ id: "item-1", fleetCode: "APX-SL-1042", weeklyRate: 50 }],
+    items: [
+      {
+        id: "item-1",
+        description: "Scissor lift 19ft electric",
+        fleetCode: "APX-SL-1042",
+        weeklyRate: 50,
+      },
+    ],
     ...overrides,
   };
 }
@@ -35,6 +45,7 @@ export function hireLine(overrides: Partial<CheckLine> = {}): CheckLine {
     vat: 42,
     orderId: "order-1",
     hireItemId: "item-1",
+    linkProblem: null,
     ...overrides,
   };
 }
@@ -65,6 +76,8 @@ export function invoice(overrides: Partial<CheckInvoice> = {}): CheckInvoice {
     date: "2026-08-31",
     type: "CONTINUATION",
     isCreditNote: false,
+    jobNo: "J100101",
+    lastInvoiceNo: null,
     gross: sum([net, vat]),
     ...overrides,
     lines,
@@ -78,6 +91,8 @@ export function context(
     invoice?: CheckInvoice;
     orders?: CheckOrder[];
     otherInvoices?: CheckInvoice[];
+    supplierItems?: SupplierItem[];
+    suspensions?: CheckSuspension[];
     rules?: Partial<ReconciliationContext["rules"]>;
     tolerance?: number;
   } = {},
@@ -87,6 +102,18 @@ export function context(
     invoice: overrides.invoice ?? invoice(),
     orders: Object.fromEntries(orders.map((o) => [o.id, o])),
     otherInvoices: overrides.otherInvoices ?? [],
+    // By default, the items of the orders in the context.
+    supplierItems:
+      overrides.supplierItems ??
+      orders.flatMap((o) =>
+        o.items.map((item) => ({
+          orderId: o.id,
+          supplierJobNo: o.supplierJobNo,
+          description: item.description,
+          weeklyRate: item.weeklyRate,
+        })),
+      ),
+    suspensions: overrides.suspensions ?? [],
     rules: {
       chargeBankHolidays: true,
       bankHolidays: ["2026-08-31"],

@@ -6,7 +6,7 @@ async function loadConfig(distDir?: string) {
   return (await import("../../next.config")).default;
 }
 
-describe("next.config: build folder (regression test for issue #5)", () => {
+describe("next.config: dev server settings (regression tests for issues #5 and #7)", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -15,6 +15,12 @@ describe("next.config: build folder (regression test for issue #5)", () => {
     const config = await loadConfig(undefined);
 
     expect(config).not.toHaveProperty("distDir");
+  });
+
+  it("turns off the Turbopack dev cache that reloads pages in a loop (regression test for issue #7)", async () => {
+    const config = await loadConfig(undefined);
+
+    expect(config.experimental?.turbopackFileSystemCacheForDev).toBe(false);
   });
 
   it("builds into the folder given by NEXT_DIST_DIR, as the Playwright test server does", async () => {
