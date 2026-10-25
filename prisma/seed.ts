@@ -15,6 +15,7 @@ import { db } from "../src/server/db";
 import { createInvoice, updateInvoiceStatus } from "../src/server/services/invoices";
 import { createOrder, offHireOrder, type OrderDto } from "../src/server/services/orders";
 import { createSuspension } from "../src/server/services/suspensions";
+import { setSiteAliases } from "../src/server/services/sites";
 
 const rules = { chargeBankHolidays: true, bankHolidays: ENGLAND_AND_WALES_BANK_HOLIDAYS };
 
@@ -91,14 +92,28 @@ async function main() {
   const rvs = await site("RVS", "Riverside Tower", "1 Riverside Walk, Northport NP1 1AA");
   const mlp = await site("MLP", "Mill Lane Primary School", "Mill Lane, Easton EA4 2BB");
   const ngw = await site("NGW", "Northgate Wharf", "Wharf Road, Northport NP3 7CC");
+  // How the supplier spells the sites in the customer reference.
+  await setSiteAliases(rvs.id, { aliases: ["RIVERSIDE", "Riverside Twr"] });
+  await setSiteAliases(mlp.id, { aliases: ["Mill Lane School"] });
+  await setSiteAliases(ngw.id, { aliases: ["NORTHGATE"] });
 
+  // Our own order numbers ("Our ref" on the invoices) are fictional, like everything else.
   const order = (
     siteId: string,
     supplierJobNo: string,
     trade: string,
     startDate: string,
     items: object[],
-  ) => createOrder({ supplierId: apex.id, siteId, supplierJobNo, trade, startDate, items });
+  ) =>
+    createOrder({
+      supplierId: apex.id,
+      siteId,
+      supplierJobNo,
+      orderRef: `PO-26-${supplierJobNo.slice(-4)}`,
+      trade,
+      startDate,
+      items,
+    });
 
   const j100101 = await order(rvs.id, "J100101", "MECH", "2026-07-01", [
     {
@@ -178,6 +193,7 @@ async function main() {
       date,
       type,
       jobNo,
+      orderRef: `PO-26-${jobNo.slice(-4)}`,
       customerRef: extra.customerRef ?? jobNo,
       ...extra,
       ...totals(lines),

@@ -77,6 +77,7 @@ export function invoice(overrides: Partial<CheckInvoice> = {}): CheckInvoice {
     type: "CONTINUATION",
     isCreditNote: false,
     jobNo: "J100101",
+    orderRef: null,
     lastInvoiceNo: null,
     gross: sum([net, vat]),
     ...overrides,

@@ -87,3 +87,13 @@ What I can explain about this project, phase by phase.
 - **Demo data that proves the checks.** The seed goes through the same services as the app, contains one deliberate supplier mistake per check, and an API test fails if any implemented check stops finding its example. A README table maps each mistake to its check.
 - **Designing the demo found a real bug.** A line billed both before delivery and after off-hire was counted twice in the report, once by R2 and once by R1. A failing test first, then each check reports only its own part, and the parts add up to the total.
 - **Safety in scripts.** The database reset scripts refuse to delete any file other than the dev or test database they are meant for.
+
+## Phase 5a: our order number, site recognition and fleet code changes
+
+- **Domain knowledge turned into rules.** Florin told me our order number is the real key and that E-codes change when items are swapped. I wrote both into the brief first, asked what each code actually is, and only then changed the data model.
+- **Refactor first, then behaviour.** Changing the linking function's signature was a separate commit with no behaviour change and all tests green; the new behaviour came after, test-first.
+- **Identity over raw values.** R15 now compares items, not codes: a recorded code change is the same item, and an unrecorded one is reported once as a possible swap instead of two unrelated findings.
+- **Recognition that refuses to guess.** Site recognition tries an explicit order of rules (alias, name, code, name words, postcode) and returns candidates instead of a site when a rule fits two. A wrong site is worse than no site.
+- **Order of events does not matter.** An invoice can arrive before its order; entering the order, an item or a new code re-links the waiting lines and re-runs the checks. An API test proves it.
+- **Real data stays local.** The app is designed around the real documents, which live in a git-ignored folder and the local database; everything committed is fictional, because git history keeps a file even after it is replaced.
+- **Test helpers deserve care too.** I replaced a test that faked an order with a type cast by a proper `createInvoiceForSupplier` helper.

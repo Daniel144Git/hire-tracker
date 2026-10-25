@@ -10,6 +10,8 @@ import { listSuspensions } from "@/server/services/suspensions";
 import { getOnHireRegister, type OnHireRegister } from "@/server/services/register";
 import { formatPounds } from "@/app/invoices/format";
 import { SuspensionForm } from "./suspension-form";
+import { AliasesForm } from "./aliases-form";
+import { FleetCodeForm } from "./fleet-code-form";
 import { CreateOrderForm } from "./create-order-form";
 import { CollectionForm, OffHireForm } from "./order-forms";
 
@@ -62,6 +64,31 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
         ) : (
           <OrdersTable orders={orders} />
         )}
+      </section>
+
+      <section aria-labelledby="fleet-code-heading" className="flex flex-col gap-3">
+        <h2 id="fleet-code-heading" className="text-lg font-medium">
+          Record a new fleet code (item swapped)
+        </h2>
+        <FleetCodeForm
+          items={orders.flatMap((order) =>
+            order.items.map((item) => ({
+              value: `${order.id}/${item.id}`,
+              label: `${order.supplierJobNo}: ${item.description}${item.fleetCode ? ` (${item.fleetCode})` : ""}`,
+            })),
+          )}
+        />
+      </section>
+
+      <section aria-labelledby="aliases-heading" className="flex flex-col gap-3">
+        <h2 id="aliases-heading" className="text-lg font-medium">
+          How suppliers write this site
+        </h2>
+        <p className="text-sm">
+          Invoices that are not linked to an order are matched to a site by these spellings of the
+          customer reference, then by name, code and postcode.
+        </p>
+        <AliasesForm siteId={site.id} aliases={site.aliases} />
       </section>
 
       <section aria-labelledby="suspensions-heading" className="flex flex-col gap-3">
@@ -139,6 +166,7 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
           <th scope="col">Status</th>
           <th scope="col">Off-hire</th>
           <th scope="col">Collection no</th>
+          <th scope="col">Our ref</th>
           <th scope="col">Action</th>
         </tr>
       </thead>
@@ -155,6 +183,8 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
                     {item.qty > 1 && `${item.qty} x `}
                     {item.description}
                     {item.fleetCode && ` (${item.fleetCode})`} £{item.weeklyRate.toFixed(2)}/wk
+                    {item.fleetCodeHistory.length > 0 &&
+                      ` (was ${item.fleetCodeHistory.map((change) => change.oldCode).join(", ")})`}
                   </li>
                 ))}
               </ul>
@@ -164,6 +194,7 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
             <td className="whitespace-nowrap">{STATUS_LABEL[order.status]}</td>
             <td className="whitespace-nowrap">{order.offHireDate ?? "-"}</td>
             <td>{order.collectionNo ?? "-"}</td>
+            <td>{order.orderRef ?? "-"}</td>
             <td>
               {order.status === "ON_HIRE" && (
                 <OffHireForm orderId={order.id} jobNo={order.supplierJobNo} />

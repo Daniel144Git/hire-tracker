@@ -103,4 +103,28 @@ describe("R8: fleet code not on an order of this job and site", () => {
   it("does not flag lines linked to an order of the invoice's job", () => {
     expect(fleetCodeNotOnOrder(context())).toEqual([]);
   });
+
+  it("flags once our order number that is on no hire order", () => {
+    const ctx = context({
+      orders: [],
+      invoice: invoice({
+        orderRef: "PO-9999",
+        lines: [
+          hireLine({
+            orderId: null,
+            hireItemId: null,
+            fleetCode: null,
+            linkProblem: "UNKNOWN_ORDER_REF",
+          }),
+        ],
+      }),
+    });
+
+    expect(fleetCodeNotOnOrder(ctx)).toEqual([
+      expect.objectContaining({
+        invoiceLineId: null,
+        message: "Our order number PO-9999 is not on any hire order",
+      }),
+    ]);
+  });
 });

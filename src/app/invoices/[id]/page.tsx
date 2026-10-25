@@ -44,6 +44,8 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
     ["Type", `${INVOICE_TYPE_LABEL[invoice.type]}${invoice.isCreditNote ? " (credit note)" : ""}`],
     ["Invoice date", invoice.date],
     ["Due date", invoice.dueDate],
+    ["Site", siteText(invoice)],
+    ["Our ref", invoice.orderRef ?? "-"],
     ["Job number", invoice.jobNo ?? "-"],
     ["Last invoice number", invoice.lastInvoiceNo ?? "-"],
     ["Customer reference", invoice.customerRef ?? "-"],
@@ -240,4 +242,19 @@ function FindingsTable({ findings }: { findings: FindingRow[] }) {
       </tbody>
     </table>
   );
+}
+
+const SITE_SOURCE: Record<string, string> = {
+  ORDER: "from the linked order",
+  ALIAS: "recognised from a recorded spelling",
+  NAME: "recognised from the site name",
+  CODE: "recognised from the site code",
+  POSTCODE: "recognised from the delivery postcode",
+};
+
+/** "RVS - Riverside Tower (from the linked order)", or why there is no site. */
+function siteText(invoice: InvoiceDto): string {
+  if (!invoice.site) return "Not recognised: link the invoice to an order or record the spelling";
+  const source = invoice.siteMatchedBy ? ` (${SITE_SOURCE[invoice.siteMatchedBy]})` : "";
+  return `${invoice.site.code} - ${invoice.site.name}${source}`;
 }

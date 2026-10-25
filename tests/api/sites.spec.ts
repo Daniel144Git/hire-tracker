@@ -19,6 +19,7 @@ test.describe("POST /api/sites", () => {
         name: "Riverside Tower",
         deliveryAddress: null,
         ordersOnHire: 0,
+        aliases: [],
       });
     },
   );

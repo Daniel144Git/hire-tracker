@@ -39,7 +39,8 @@ export interface CheckLine {
   orderId: string | null;
   hireItemId: string | null;
   /** Why the line could not be linked when it was saved (Phase 3). */
-  linkProblem: "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE" | null;
+  linkProblem:
+    "UNKNOWN_ORDER_REF" | "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE" | null;
 }
 
 export interface CheckInvoice {
@@ -50,6 +51,8 @@ export interface CheckInvoice {
   isCreditNote: boolean;
   /** Job number printed in the header: one hire order. */
   jobNo: string | null;
+  /** "Our ref" printed in the header: our own order number. */
+  orderRef: string | null;
   /** "Last invoice" printed on the invoice: the previous invoice of the same job. */
   lastInvoiceNo: string | null;
   net: number;
@@ -65,7 +68,14 @@ export interface CheckOrder {
   startDate: IsoDate;
   offHireDate: IsoDate | null;
   damageWaiverApplies: boolean;
-  items: { id: string; description: string; fleetCode: string | null; weeklyRate: number }[];
+  items: {
+    id: string;
+    description: string;
+    fleetCode: string | null;
+    weeklyRate: number;
+    /** Codes the item had before a recorded change (E-code swap). */
+    previousFleetCodes?: string[];
+  }[];
 }
 
 /** An item on any hire order of the supplier, for comparing rates across orders (R12). */

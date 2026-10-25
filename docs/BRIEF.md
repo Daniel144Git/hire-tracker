@@ -149,11 +149,20 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - Monthly report: site × trade, net and gross, plus the list of lines behind each cell.
 - Yearly report: per site per month.
 
-### 4.5 Notes from Florin for phase 5 (to confirm before building)
+### 4.5 Notes from Florin for phase 5 (confirmed)
 
-- **"Our ref" is the key.** Florin expects the "Our ref" printed on the invoices to be the key that identifies the hire order, as in the spreadsheet. To confirm: is it our own order number (the spreadsheet's "order number" column) or the supplier's job / contract number? If it is our order number, `HireOrder` gets an `orderRef` field, and line linking uses it before the supplier's job number.
-- **Items and E-codes.** Under each order the invoice lists the items, and many of them carry an E-code, the same code the spreadsheet holds. An E-code can change from one monthly continuation invoice to the next, when the item is swapped or the product changes. To confirm: is the E-code the fleet code (the id of the physical item) or a separate product code printed next to it? Either way the app keeps the history of an item's codes (old code, new code, from which invoice), so that R15 shows a change of code as a swap to confirm, not as one item gone plus an unknown one billed.
-- **Acceptance test with real documents.** The final test of phase 5 runs the invoices of the previous months through the app, and every supplier statement must match them (R11): every statement line found, every amount equal, nothing held that is not on a statement. The real invoices and statements stay on Florin's machine (a git-ignored folder) or in the private deployment (section 9). They are never committed and never used in CI.
+- **"Our ref" is our own order number**, the spreadsheet's "order number" column, printed on the supplier's invoices. It is the key from an invoice to a hire order. `HireOrder.orderRef` holds it, and line linking uses it before the supplier's job number.
+- **E-codes are fleet codes**: the code of the physical item, the same code the spreadsheet holds. An E-code can change from one monthly continuation invoice to the next, when the item is swapped or the product changes. The app records each change of code on an item (old code, new code, date), keeps linking invoice lines with the old code to the item, and R15 reports a code gone plus a code new on the same order as one possible swap to confirm, not as two unrelated findings.
+- **Acceptance test with real documents.** The final test of phase 5 runs the invoices of the previous months through the app, and every supplier statement must match them (R11): every statement line found, every amount equal, nothing held that is not on a statement. The real documents stay in `private/` and the local database; fictional demo data can replace them later for demos.
+
+**Phase 5 is split in three parts:** 5a our order number, site recognition (aliases, delivery address) and fleet code changes; 5b PDF upload, extraction (mock in tests, an AI API for real use) and the review screen; 5c statement import and R11, then the acceptance test with real documents.
+
+**Implemented in Phase 5a:**
+
+- `HireOrder.orderRef` (unique) and `Invoice.orderRef`. `linkInvoiceLine` finds the header's order by our order number, then by job number; a line's fleet code matches an item's current or earlier codes. `UNKNOWN_ORDER_REF` joins the link problems, and R8 reports it once per invoice.
+- `FleetCodeChange` keeps an item's earlier codes. Recording a change re-links the supplier's unlinked lines and re-checks the order's invoices. R15 compares items, not raw codes, so a recorded change is the same item; one code gone plus one new code on the job is reported as a single possible swap.
+- `SiteAlias` stores how suppliers spell a site, normalised (upper case, letters and digits). `recognizeSite` tries, in order: a recorded alias, the exact name, the code as a word, every word of the reference in the name, the delivery postcode; when a rule fits two sites it returns them as candidates and picks none. `Invoice.siteId` comes from the first linked order (`siteMatchedBy = ORDER`), otherwise from recognition.
+- Unlinked lines are linked again when an order, an item, an order number or a fleet code is added or changed: an invoice can be entered before its order.
 
 ## 5. Suggested data model
 

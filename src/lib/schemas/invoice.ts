@@ -44,6 +44,10 @@ export const invoiceCreateSchema = z
     type: z.enum(INVOICE_TYPES),
     isCreditNote: z.boolean().default(false),
     jobNo: identifierSchema(40).optional(),
+    /** "Our ref": our own order number, the key to the hire order. */
+    orderRef: identifierSchema(40).optional(),
+    /** Delivery address printed on the invoice: helps recognise the site. */
+    deliveryAddress: textSchema(300).optional(),
     lastInvoiceNo: identifierSchema(40).optional(),
     customerRef: textSchema(200).optional(),
     // Header totals exactly as printed. Whether they add up is checked later (R10), not here.

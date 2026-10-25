@@ -28,6 +28,7 @@ export interface HireItem {
 export interface Order {
   id: string;
   supplierJobNo: string;
+  orderRef: string | null;
   supplier: { id: string; name: string };
   site: { id: string; code: string; name: string };
   trade: string;
@@ -71,6 +72,9 @@ export interface Finding {
 export interface Invoice {
   id: string;
   number: string;
+  orderRef: string | null;
+  site: { id: string; code: string; name: string } | null;
+  siteMatchedBy: string | null;
   supplier: { id: string; name: string };
   date: string;
   dueDate: string;
@@ -127,6 +131,14 @@ export class ApiClient {
         overrides,
       ),
     );
+  }
+
+  /** An invoice that is not for a known order: only the supplier is known. */
+  async createInvoiceForSupplier(
+    supplier: Supplier,
+    overrides: Record<string, unknown> = {},
+  ): Promise<Invoice> {
+    return this.post("/api/invoices", invoiceData({ supplierId: supplier.id }, overrides));
   }
 
   async offHire(orderId: string, body: { offHireDate: string; collectionNo?: string }) {
