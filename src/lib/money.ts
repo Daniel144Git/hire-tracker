@@ -12,3 +12,21 @@ export function round2(value: number): number {
   const pence = Number((Math.abs(value) * 100).toPrecision(15));
   return Math.sign(value) * (Math.round(pence) / 100) + 0;
 }
+
+/**
+ * Pounds to whole pence, for storage. Money is never stored as a floating-point number.
+ * toPrecision(15) removes floating-point noise first: 19.99 * 100 is 1998.9999999999998.
+ * Throws on fractions of a penny, which would otherwise be lost silently.
+ */
+export function toPence(pounds: number): number {
+  const pence = Number((pounds * 100).toPrecision(15));
+  if (!Number.isInteger(pence)) {
+    throw new RangeError(`£${pounds} has fractions of a penny`);
+  }
+  return pence;
+}
+
+/** Whole pence back to pounds, for the API and the calculator. */
+export function fromPence(pence: number): number {
+  return pence / 100;
+}
