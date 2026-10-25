@@ -119,3 +119,14 @@ What I can explain about this project, phase by phase.
 - **Refuse what cannot be trusted.** A statement whose lines do not add up to its own total is refused rather than half-imported, because every comparison after it would be built on a misread line.
 - **E2E tests find UX bugs.** The confirmation message vanished with the button it belonged to; the E2E test failed on it, and the form now stays on the page.
 - **Mutation checks on the boundaries:** "dated before" versus "on or before" the statement, and "latest statement only", each break a unit test when changed.
+
+## Phase 6: cost reports and exports
+
+- **Copy the business's own rule.** Which month an invoice belongs to is a business decision; the real allocation sheet puts it in the month of its date, so the app does the same, and the brief records it.
+- **Totals that match the paper.** VAT rounded once on the invoice total is a penny away from the lines' VAT. Reports spread that penny over the largest lines, so a site's total adds up to its invoices exactly. Unit tests cover one penny, several pennies and credit notes.
+- **Money in pence.** Report sums are kept as whole pence and turned into pounds once, so adding hundreds of lines never drifts.
+- **Small dependencies.** An .xlsx file is a ZIP of XML; writing a minimal one with `fflate` (no other dependencies) avoided a large spreadsheet library. A unit test unzips it and checks the XML; locally it opens in a spreadsheet reader.
+- **CSV injection.** Text starting with `=`, `+`, `-` or `@` is written as text, so a description cannot run as a formula when the file is opened.
+- **Testing reports in parallel.** Reports cover all the data, so each test uses its own random far-future month and its own site, and can check exact totals.
+- **Testing downloads.** API tests unzip the ZIP and compare the PDF bytes with the original; the E2E test waits for the browser's download event and checks the file name.
+- **A test bug, not an app bug.** A filter looked for the table inside its own row and found nothing; the fix was a page-object method, the same pattern as the existing ones.
