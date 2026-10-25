@@ -58,7 +58,15 @@ describe("contract layout", () => {
             net: 73.44,
             vat: 14.69,
           },
-          { description: "Collection", qty: 1, chargeType: "TRANSPORT", net: 85, vat: 17 },
+          {
+            description: "Collection",
+            qty: 1,
+            periodFrom: "2026-08-04",
+            periodTo: "2026-08-04",
+            chargeType: "TRANSPORT",
+            net: 85,
+            vat: 17,
+          },
         ],
       },
     });

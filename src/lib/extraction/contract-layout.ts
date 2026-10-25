@@ -109,6 +109,9 @@ function toLine(block: Block, isCreditNote: boolean, vatRate: number): DraftLine
   const description =
     chargeType === "HIRE" && fleetCode ? block.text.slice(0, fleetCode.index).trim() : block.first;
   const line: DraftLine = { description, qty: 1, chargeType, net, vat: round2(net * vatRate) };
+  if (chargeType === "TRANSPORT" && block.dates.length > 0) {
+    line.periodFrom = line.periodTo = block.dates[0];
+  }
   if (chargeType !== "HIRE") return line;
   if (fleetCode) line.fleetCode = fleetCode[1];
   if (block.dates.length >= 2) [line.periodFrom, line.periodTo] = block.dates;

@@ -43,6 +43,31 @@ test.describe("Our order number", () => {
   });
 });
 
+test.describe("Items hired again on a new job", () => {
+  test("an invoice of the new job moves to it once its order is entered", async ({ api }) => {
+    // The same physical item (fleet code) was on a job at one site, went back, and was hired
+    // again on a new job at another site. The invoice of the new job arrives first.
+    const supplier = await api.createSupplier();
+    const fleetCode = `APX-SL-${uniqueCode(4)}`;
+    const oldJob = await api.createOrder({
+      supplier,
+      overrides: { items: [itemData({ fleetCode })] },
+    });
+    const newJobNo = `J${uniqueCode(7)}`;
+    const invoice = await api.createInvoice(oldJob, { jobNo: newJobNo });
+    expect(invoice.lines[0].order?.id).toBe(oldJob.id);
+
+    const newJob = await api.createOrder({
+      supplier,
+      overrides: { supplierJobNo: newJobNo, items: [itemData({ fleetCode })] },
+    });
+
+    const relinked = await api.getInvoice(invoice.id);
+    expect(relinked.lines.map((line) => line.order?.id)).toEqual([newJob.id, newJob.id]);
+    expect(relinked.site?.id).toBe(newJob.site.id);
+  });
+});
+
 test.describe("Site recognition", () => {
   test("recognises a site from an alias recorded for it", async ({ request, api }) => {
     const site = await api.createSite();
