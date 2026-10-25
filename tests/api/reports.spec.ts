@@ -41,8 +41,10 @@ test.describe("GET /api/reports/discrepancies", () => {
 
       const response = await request.get(`/api/reports/discrepancies?month=${month}`);
 
+      // Every order still on hire that month shows up, other tests' orders too, so the test
+      // looks for its own order instead of expecting a list of one.
       const { missingPeriods } = await response.json();
-      expect(missingPeriods).toEqual([
+      expect(missingPeriods).toContainEqual(
         expect.objectContaining({
           check: "R4",
           orderId: order.id,
@@ -51,7 +53,7 @@ test.describe("GET /api/reports/discrepancies", () => {
           from: `${month}-01`,
           workingDaysOnHire: expect.any(Number),
         }),
-      ]);
+      );
     },
   );
 
