@@ -109,4 +109,56 @@ describe("R15: item tracking month to month, per job", () => {
 
     expect(itemTracking(ctx)).toEqual([]);
   });
+
+  describe("fleet code changes (E-codes)", () => {
+    const swapped = order({
+      items: [
+        { id: "item-1", description: "Scissor lift", fleetCode: "APX-SL-1042", weeklyRate: 50 },
+        {
+          id: "item-2",
+          description: "Pipe groover",
+          fleetCode: "APX-PG-0400",
+          weeklyRate: 41.29,
+          previousFleetCodes: ["APX-PG-0317"],
+        },
+      ],
+    });
+
+    it("says nothing about a code change that was recorded on the item", () => {
+      const ctx = context({
+        orders: [swapped],
+        otherInvoices: [julyBothItems],
+        invoice: invoice({ lines: [hireLine(), grooverLine({ fleetCode: "APX-PG-0400" })] }),
+      });
+
+      expect(itemTracking(ctx)).toEqual([]);
+    });
+
+    it("reports a code gone and a code new on the job as one possible swap", () => {
+      const ctx = context({
+        orders: [twoItems],
+        otherInvoices: [julyBothItems],
+        invoice: invoice({
+          lines: [
+            hireLine(),
+            grooverLine({
+              fleetCode: "APX-PG-0400",
+              hireItemId: null,
+              linkProblem: "UNKNOWN_FLEET_CODE",
+            }),
+          ],
+        }),
+      });
+
+      expect(itemTracking(ctx)).toEqual([
+        expect.objectContaining({
+          check: "R15",
+          severity: "MEDIUM",
+          invoiceLineId: "groover",
+          message:
+            "APX-PG-0317 (billed on INV-20700) is gone and APX-PG-0400 is new on job J100101: the same item swapped? Confirm on site, then record the new code on the item",
+        }),
+      ]);
+    });
+  });
 });

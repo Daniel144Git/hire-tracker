@@ -29,6 +29,51 @@ const orders: OrderForLinking[] = [
   },
 ];
 
+describe("linkInvoiceLine: our order number and fleet code changes", () => {
+  const withRefs: OrderForLinking[] = [
+    { ...orders[0], orderRef: "PO-1001" },
+    {
+      ...orders[1],
+      orderRef: "PO-1002",
+      items: [
+        { id: "item-platform", fleetCode: "APX-MP-0600", previousFleetCodes: ["APX-MP-0588"] },
+      ],
+    },
+  ];
+
+  it("links by our order number ('Our ref') before the job number", () => {
+    expect(linkInvoiceLine({}, { orderRef: "PO-1002", jobNo: "J100101" }, withRefs)).toEqual({
+      orderId: "order-2",
+      hireItemId: null,
+      problem: null,
+    });
+  });
+
+  it("falls back to the job number when our order number is on no order", () => {
+    expect(linkInvoiceLine({}, { orderRef: "PO-9999", jobNo: "J100101" }, withRefs)).toEqual({
+      orderId: "order-1",
+      hireItemId: null,
+      problem: null,
+    });
+  });
+
+  it("reports our order number when neither reference is on an order", () => {
+    expect(linkInvoiceLine({}, { orderRef: "PO-9999", jobNo: "J999999" }, withRefs).problem).toBe(
+      "UNKNOWN_ORDER_REF",
+    );
+  });
+
+  it("links a line billed with an item's previous fleet code to that item", () => {
+    expect(
+      linkInvoiceLine({ fleetCode: "APX-MP-0588" }, { orderRef: "PO-1002" }, withRefs),
+    ).toEqual({
+      orderId: "order-2",
+      hireItemId: "item-platform",
+      problem: null,
+    });
+  });
+});
+
 describe("linkInvoiceLine: links a line to a hire order and item", () => {
   it("links by fleet code within the invoice's job number", () => {
     expect(linkInvoiceLine({ fleetCode: "APX-PG-0317" }, { jobNo: "J100101" }, orders)).toEqual({
