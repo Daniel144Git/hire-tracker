@@ -26,6 +26,8 @@ export const orderCreateSchema = z.strictObject({
   supplierId: z.string().min(1, "Required"),
   siteId: z.string().min(1, "Required"),
   supplierJobNo: identifierSchema(40),
+  /** Our own order number, printed as "Our ref" on the supplier's invoices. */
+  orderRef: identifierSchema(40).optional(),
   trade: tradeSchema,
   startDate: isoDateSchema,
   /** Left out: taken from the supplier (true when the supplier charges a damage waiver). */
@@ -38,6 +40,7 @@ export const orderUpdateSchema = z
   .strictObject({
     trade: tradeSchema.optional(),
     damageWaiverApplies: z.boolean().optional(),
+    orderRef: identifierSchema(40).optional(),
   })
   .refine(hasAtLeastOneField, { message: "Provide at least one field to update" });
 
@@ -55,3 +58,12 @@ export type OrderCreateInput = z.infer<typeof orderCreateSchema>;
 export type OrderUpdateInput = z.infer<typeof orderUpdateSchema>;
 export type OffHireInput = z.infer<typeof offHireSchema>;
 export type CollectionInput = z.infer<typeof collectionSchema>;
+
+/** A new fleet code (E-code) for an item, e.g. when the supplier swaps it. */
+export const fleetCodeChangeSchema = z.strictObject({
+  newCode: identifierSchema(40),
+  changedOn: isoDateSchema,
+  note: textSchema(200).optional(),
+});
+
+export type FleetCodeChangeInput = z.infer<typeof fleetCodeChangeSchema>;

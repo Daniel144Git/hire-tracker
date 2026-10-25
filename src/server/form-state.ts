@@ -11,6 +11,8 @@ const FIELD_BY_CODE: Record<string, string> = {
   DUPLICATE_JOB_NO: "supplierJobNo",
   DUPLICATE_SUPPLIER: "name",
   DUPLICATE_INVOICE: "number",
+  DUPLICATE_ORDER_REF: "orderRef",
+  DUPLICATE_ALIAS: "aliases",
   OFF_HIRE_BEFORE_START: "offHireDate",
 };
 

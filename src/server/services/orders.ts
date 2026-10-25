@@ -5,13 +5,15 @@ import { fromPence, toPence } from "@/lib/money";
 import { planCollection, planOffHire } from "@/lib/orders/status";
 import {
   collectionSchema,
+  fleetCodeChangeSchema,
   hireItemSchema,
   offHireSchema,
   orderCreateSchema,
   orderUpdateSchema,
   type HireItemInput,
 } from "@/lib/schemas/order";
-import type { HireItem, Prisma } from "@/generated/prisma/client";
+import type { FleetCodeChange, HireItem, Prisma } from "@/generated/prisma/client";
+import { relinkInvoices } from "./linking";
 import { recheckRelatedInvoices } from "./reconciliation";
 
 const ORDER_STATUSES = ["ON_HIRE", "OFF_HIRED", "COLLECTED"] as const;
@@ -24,7 +26,10 @@ export const orderFilterSchema = z.strictObject({
 const orderInclude = {
   supplier: { select: { id: true, name: true } },
   site: { select: { id: true, code: true, name: true } },
-  items: { orderBy: [{ isAccessory: "asc" }, { createdAt: "asc" }] },
+  items: {
+    orderBy: [{ isAccessory: "asc" }, { createdAt: "asc" }],
+    include: { codeChanges: { orderBy: { createdAt: "asc" } } },
+  },
 } satisfies Prisma.HireOrderInclude;
 
 type OrderRow = Prisma.HireOrderGetPayload<{ include: typeof orderInclude }>;
@@ -32,7 +37,9 @@ type OrderRow = Prisma.HireOrderGetPayload<{ include: typeof orderInclude }>;
 export type OrderDto = ReturnType<typeof toDto>;
 export type HireItemDto = OrderDto["items"][number];
 
-function itemToDto(item: HireItem) {
+type ItemRow = HireItem & { codeChanges: FleetCodeChange[] };
+
+function itemToDto(item: ItemRow) {
   return {
     id: item.id,
     description: item.description,
@@ -42,6 +49,13 @@ function itemToDto(item: HireItem) {
     despatchNo: item.despatchNo,
     despatchDate: item.despatchDate,
     isAccessory: item.isAccessory,
+    /** Earlier fleet codes (E-codes) of the item, oldest first. */
+    fleetCodeHistory: item.codeChanges.map((change) => ({
+      oldCode: change.oldCode,
+      newCode: change.newCode,
+      changedOn: change.changedOn,
+      note: change.note,
+    })),
   };
 }
 
@@ -49,6 +63,7 @@ function toDto(order: OrderRow) {
   return {
     id: order.id,
     supplierJobNo: order.supplierJobNo,
+    orderRef: order.orderRef,
     supplier: order.supplier,
     site: order.site,
     trade: order.trade,
@@ -106,27 +121,87 @@ export async function createOrder(body: unknown): Promise<OrderDto> {
     );
   }
 
+  if (input.orderRef) await assertOrderRefIsFree(input.orderRef);
+
   const order = await db.hireOrder.create({
     data: {
       ...input,
       damageWaiverApplies: input.damageWaiverApplies ?? supplier.damageWaiverPct > 0,
       items: { create: items.map(toItemData) },
     },
-    include: orderInclude,
   });
-  return toDto(order);
+  // Invoices may have arrived before the order was entered: link them now.
+  await relinkInvoices(supplier.id);
+  return getOrder(order.id);
+}
+
+async function assertOrderRefIsFree(orderRef: string, exceptId?: string): Promise<void> {
+  const existing = await db.hireOrder.findUnique({ where: { orderRef } });
+  if (existing && existing.id !== exceptId) {
+    throw new ConflictError(`Order number ${orderRef} is already used`, "DUPLICATE_ORDER_REF");
+  }
 }
 
 export async function updateOrder(id: string, body: unknown): Promise<OrderDto> {
   const input = orderUpdateSchema.parse(body);
-  await getOrder(id);
-  return toDto(await db.hireOrder.update({ where: { id }, data: input, include: orderInclude }));
+  const order = await getOrder(id);
+  if (input.orderRef) await assertOrderRefIsFree(input.orderRef, id);
+  await db.hireOrder.update({ where: { id }, data: input });
+  if (input.orderRef) await relinkInvoices(order.supplier.id);
+  return getOrder(id);
 }
 
 export async function addItem(orderId: string, body: unknown): Promise<HireItemDto> {
   const input = hireItemSchema.parse(body);
-  await getOrder(orderId);
-  return itemToDto(await db.hireItem.create({ data: { ...toItemData(input), orderId } }));
+  const order = await getOrder(orderId);
+  const item = await db.hireItem.create({
+    data: { ...toItemData(input), orderId },
+    include: { codeChanges: true },
+  });
+  await relinkInvoices(order.supplier.id);
+  return itemToDto(item);
+}
+
+/**
+ * Records a new fleet code (E-code) for an item, e.g. when the supplier swaps it. The old code
+ * is kept in the item's history, so lines billed with it still link to the item; lines billed
+ * with the new code are linked now, and the order's invoices are checked again.
+ */
+export async function changeFleetCode(
+  orderId: string,
+  itemId: string,
+  body: unknown,
+): Promise<HireItemDto> {
+  const input = fleetCodeChangeSchema.parse(body);
+  const order = await getOrder(orderId);
+  const item = order.items.find((i) => i.id === itemId);
+  if (!item) throw new NotFoundError("Item", itemId);
+  if (item.fleetCode === input.newCode) {
+    throw new ValidationError("The request is not valid", [
+      { path: ["newCode"], message: `The item already has fleet code ${input.newCode}` },
+    ]);
+  }
+
+  await db.$transaction([
+    ...(item.fleetCode
+      ? [
+          db.fleetCodeChange.create({
+            data: {
+              hireItemId: itemId,
+              oldCode: item.fleetCode,
+              newCode: input.newCode,
+              changedOn: input.changedOn,
+              note: input.note,
+            },
+          }),
+        ]
+      : []),
+    db.hireItem.update({ where: { id: itemId }, data: { fleetCode: input.newCode } }),
+  ]);
+  await relinkInvoices(order.supplier.id);
+  await recheckRelatedInvoices({ orderIds: [orderId] });
+  const updated = (await getOrder(orderId)).items.find((i) => i.id === itemId);
+  return updated as HireItemDto;
 }
 
 export async function offHireOrder(id: string, body: unknown): Promise<OrderDto> {

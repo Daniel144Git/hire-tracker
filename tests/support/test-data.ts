@@ -33,6 +33,7 @@ export function orderData(
   return {
     ...ids,
     supplierJobNo: `J${uniqueCode(7)}`,
+    orderRef: `PO-${uniqueCode(8)}`,
     trade: "MECH",
     startDate: "2026-08-03",
     items: [itemData()],

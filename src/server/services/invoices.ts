@@ -10,21 +10,25 @@ import {
   type InvoiceLineInput,
 } from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
+import { loadOrdersForLinking, resolveInvoiceSite } from "./linking";
 import { checkInvoice, recheckRelatedInvoices, toFindingDto } from "./reconciliation";
 
 export const invoiceFilterSchema = z.strictObject({
   supplierId: z.string().min(1).optional(),
   jobNo: z.string().trim().toUpperCase().min(1).optional(),
+  siteId: z.string().min(1).optional(),
 });
 
 const summaryInclude = {
   supplier: { select: { id: true, name: true } },
+  site: { select: { id: true, code: true, name: true } },
   lines: { select: { linkProblem: true } },
   findings: { where: { resolved: false }, select: { severity: true } },
 } satisfies Prisma.InvoiceInclude;
 
 const detailInclude = {
   supplier: { select: { id: true, name: true } },
+  site: { select: { id: true, code: true, name: true } },
   lines: {
     orderBy: { position: "asc" },
     include: {
@@ -54,8 +58,13 @@ function headerDto(invoice: InvoiceSummaryRow | InvoiceDetailRow) {
     type: invoice.type,
     isCreditNote: invoice.isCreditNote,
     jobNo: invoice.jobNo,
+    orderRef: invoice.orderRef,
     lastInvoiceNo: invoice.lastInvoiceNo,
     customerRef: invoice.customerRef,
+    deliveryAddress: invoice.deliveryAddress,
+    site: invoice.site,
+    /** ORDER when the site comes from a linked order, otherwise how it was recognised. */
+    siteMatchedBy: invoice.siteMatchedBy,
     net: fromPence(invoice.netPence),
     vat: fromPence(invoice.vatPence),
     gross: fromPence(invoice.grossPence),
@@ -145,15 +154,7 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
     );
   }
 
-  const orders = await db.hireOrder.findMany({
-    where: { supplierId: supplier.id },
-    select: {
-      id: true,
-      supplierJobNo: true,
-      orderRef: true,
-      items: { select: { id: true, fleetCode: true } },
-    },
-  });
+  const orders = await loadOrdersForLinking(supplier.id);
 
   const invoice = await db.invoice.create({
     select: { id: true },
@@ -184,6 +185,7 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
 
   // Check the new invoice, then the other invoices of the same orders and job: a credit note
   // can close an R1 finding, a late invoice can repair the chain (R14) on a later one.
+  await resolveInvoiceSite(invoice.id);
   await checkInvoice(invoice.id);
   const linkedOrderIds = await db.invoiceLine.findMany({
     where: { invoiceId: invoice.id, orderId: { not: null } },

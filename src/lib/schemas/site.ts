@@ -17,3 +17,18 @@ export const siteUpdateSchema = siteCreateSchema
 
 export type SiteCreateInput = z.infer<typeof siteCreateSchema>;
 export type SiteUpdateInput = z.infer<typeof siteUpdateSchema>;
+
+/** The customer references a supplier uses for a site; replaces the site's list. */
+export const siteAliasesSchema = z.strictObject({
+  aliases: z.array(textSchema(100)).max(50),
+});
+
+/** What an invoice says about its site: at least one of the two. */
+export const recognizeSiteQuerySchema = z
+  .strictObject({
+    customerRef: textSchema(200).optional(),
+    deliveryAddress: textSchema(300).optional(),
+  })
+  .refine((query) => query.customerRef || query.deliveryAddress, {
+    message: "Give a customer reference or a delivery address",
+  });
