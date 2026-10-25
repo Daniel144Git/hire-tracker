@@ -55,6 +55,9 @@ export interface CheckInvoice {
   orderRef: string | null;
   /** "Last invoice" printed on the invoice: the previous invoice of the same job. */
   lastInvoiceNo: string | null;
+  /** The invoice's site, when known: from its linked orders or recognised (R9). */
+  siteId?: string | null;
+  siteCode?: string | null;
   net: number;
   vat: number;
   gross: number;
@@ -95,6 +98,15 @@ export interface CheckSuspension {
   freeDays: number;
 }
 
+/** Something recorded on site that can justify a damage, loss, repair or service charge (R9). */
+export interface CheckServiceEvent {
+  siteId: string;
+  date: IsoDate;
+  kind: "SERVICE" | "INSPECTION" | "REPAIR" | "DAMAGE" | "LOSS";
+  /** The item it concerns, when known. */
+  fleetCode: string | null;
+}
+
 /** Everything a check may look at. Built from the database, but plain data, so checks are pure. */
 export interface ReconciliationContext {
   /** The invoice being checked. */
@@ -110,6 +122,8 @@ export interface ReconciliationContext {
   supplierItems: SupplierItem[];
   /** Suspensions of the sites of these orders (R16). */
   suspensions: CheckSuspension[];
+  /** Service, repair, damage and loss events of the sites of these orders and the invoice (R9). */
+  serviceEvents: CheckServiceEvent[];
   rules: ChargingRules & { damageWaiverPct: number };
   /** Differences up to this amount (pounds) are ignored by R5, R6, R12 and R13. */
   tolerance: number;

@@ -7,6 +7,8 @@ export class SitePage {
   readonly newOrderForm: Locator;
   readonly suspensionForm: Locator;
   readonly suspensionsTable: Locator;
+  readonly eventForm: Locator;
+  readonly eventsTable: Locator;
   /** The on-hire register; its caption starts with "As of <date>". */
   readonly onHireTable: Locator;
 
@@ -14,6 +16,8 @@ export class SitePage {
     this.onHireTable = page.getByRole("table", { name: /^As of/ });
     this.suspensionForm = page.getByRole("form", { name: "Record a suspension" });
     this.suspensionsTable = page.getByRole("table", { name: "Hire suspensions" });
+    this.eventForm = page.getByRole("form", { name: "Record an event" });
+    this.eventsTable = page.getByRole("table", { name: "Services, repairs, damage and losses" });
     this.heading = page.getByRole("heading", { level: 1 });
     this.ordersTable = page.getByRole("table", { name: "Hire orders on this site" });
     this.newOrderForm = page.getByRole("form", { name: "New hire order" });

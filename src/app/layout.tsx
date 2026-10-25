@@ -13,7 +13,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <header className="border-b border-gray-300">
-          <nav aria-label="Main" className="mx-auto flex max-w-5xl gap-6 px-6 py-3">
+          <nav
+            aria-label="Main"
+            className="mx-auto flex max-w-5xl flex-wrap gap-x-6 gap-y-2 px-6 py-3"
+          >
             <Link href="/" className="font-semibold">
               Hire Tracker
             </Link>
@@ -34,6 +37,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             <Link href="/statements" className="underline-offset-4 hover:underline">
               Statements
+            </Link>
+            <Link href="/alerts" className="underline-offset-4 hover:underline">
+              Alerts
             </Link>
           </nav>
         </header>

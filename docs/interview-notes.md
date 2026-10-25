@@ -130,3 +130,12 @@ What I can explain about this project, phase by phase.
 - **Testing reports in parallel.** Reports cover all the data, so each test uses its own random far-future month and its own site, and can check exact totals.
 - **Testing downloads.** API tests unzip the ZIP and compare the PDF bytes with the original; the E2E test waits for the browser's download event and checks the file name.
 - **A test bug, not an app bug.** A filter looked for the table inside its own row and found nothing; the fix was a page-object method, the same pattern as the existing ones.
+
+## Phase 7: damage on site, query emails and alerts
+
+- **Fit the rule to the real data.** The brief's R9 is about service visits; the real invoices have none, but they do charge for lost and damaged parts. R9 checks those against events recorded on site, and on the real invoices it found eight unconfirmed charges.
+- **Time windows are boundaries to test.** "60 days before, 7 days after" got tests on day 60, day 61, day 7 and day 8, plus another site and another item.
+- **Try the output on real data.** The first query emails drafted from real invoices included our own gaps ("job number not on any order"), which a supplier cannot answer. Those are now left out, and an unknown site is a low finding. Each change started with a failing test.
+- **No side effects the user did not ask for.** The app drafts emails but never sends them: the person edits the text and opens it in their own email app.
+- **Reuse over rebuild.** Alerts are a pure function over the on-hire register that already existed, so the cost and days on hire come from code that is already tested.
+- **Client and server code in Next.js.** A label table exported from a client component would reach the server page as a reference, not an object; it moved to a shared module both can import.

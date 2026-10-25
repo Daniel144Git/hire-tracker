@@ -33,6 +33,7 @@ export const CHECK_LABEL: Record<string, string> = {
   R6: "Rate changed since last month",
   R7: "Continuation after return",
   R8: "Fleet code not on an order",
+  R9: "Charge with nothing recorded on site",
   R10: "VAT or totals",
   R12: "Different rates for the same item",
   R13: "Damage waiver",

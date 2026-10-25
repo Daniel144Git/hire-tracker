@@ -99,6 +99,7 @@ model Site {
   suspensions     Suspension[]
   aliases         SiteAlias[]
   invoices        Invoice[]
+  serviceEvents   ServiceEvent[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
@@ -312,4 +313,30 @@ model StatementLine {
 
   @@index([statementId])
   @@index([invoiceNo])
+}
+
+enum ServiceKind {
+  SERVICE
+  INSPECTION
+  REPAIR
+  DAMAGE
+  LOSS
+}
+
+/// Something that happened on site to hired equipment: a service or inspection visit, a repair,
+/// damage or a loss. A damage, loss, repair or service charge must match one (R9).
+model ServiceEvent {
+  id          String      @id @default(cuid())
+  site        Site        @relation(fields: [siteId], references: [id])
+  siteId      String
+  date        String
+  kind        ServiceKind
+  /// The item it concerns, when known.
+  fleetCode   String?
+  description String
+  /// Who on site confirmed it.
+  confirmedBy String?
+  createdAt   DateTime    @default(now())
+
+  @@index([siteId, date])
 }

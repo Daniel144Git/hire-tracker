@@ -5,6 +5,7 @@ import { amountDiffersFromExpected } from "./checks/r05-amount-differs";
 import { rateDrift } from "./checks/r06-rate-drift";
 import { continuationAfterReturn } from "./checks/r07-continuation-after-return";
 import { fleetCodeNotOnOrder } from "./checks/r08-fleet-code-not-on-order";
+import { chargeWithoutEvent } from "./checks/r09-charge-without-event";
 import { vatAndTotals } from "./checks/r10-vat-and-totals";
 import { rateInconsistency } from "./checks/r12-rate-inconsistency";
 import { damageWaiverCheck } from "./checks/r13-damage-waiver";
@@ -17,7 +18,7 @@ import type { Check, Finding, ReconciliationContext } from "./types";
 /**
  * Every check the engine runs on an invoice. A new check is one file plus one line here.
  * R4 (missing months) works on orders, not on one invoice: see missing-periods.ts.
- * R9 (service events) and R11 (supplier statements) come in later phases.
+ * R11 (supplier statements) works on a statement: see src/lib/statements/reconcile.ts.
  */
 export const CHECKS: readonly Check[] = [
   billedAfterOffHire,
@@ -27,6 +28,7 @@ export const CHECKS: readonly Check[] = [
   rateDrift,
   continuationAfterReturn,
   fleetCodeNotOnOrder,
+  chargeWithoutEvent,
   vatAndTotals,
   rateInconsistency,
   damageWaiverCheck,

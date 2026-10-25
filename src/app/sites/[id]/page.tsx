@@ -7,9 +7,12 @@ import { listOrders, type OrderDto } from "@/server/services/orders";
 import { getSite, type SiteDto } from "@/server/services/sites";
 import { listSuppliers } from "@/server/services/suppliers";
 import { listSuspensions } from "@/server/services/suspensions";
+import { listServiceEvents } from "@/server/services/service-events";
 import { getOnHireRegister, type OnHireRegister } from "@/server/services/register";
 import { formatPounds } from "@/app/invoices/format";
 import { SuspensionForm } from "./suspension-form";
+import { ServiceEventForm } from "./service-event-form";
+import { SERVICE_KIND_LABEL } from "@/lib/schemas/service-event";
 import { AliasesForm } from "./aliases-form";
 import { FleetCodeForm } from "./fleet-code-form";
 import { CreateOrderForm } from "./create-order-form";
@@ -31,11 +34,12 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
   const site = await findSite(id);
-  const [orders, suppliers, suspensions, register] = await Promise.all([
+  const [orders, suppliers, suspensions, register, events] = await Promise.all([
     listOrders({ siteId: id }),
     listSuppliers(),
     listSuspensions(id),
     getOnHireRegister(id),
+    listServiceEvents(id),
   ]);
 
   return (
@@ -121,6 +125,46 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
           </table>
         )}
         <SuspensionForm siteId={site.id} />
+      </section>
+
+      <section aria-labelledby="events-heading" className="flex flex-col gap-3">
+        <h2 id="events-heading" className="text-lg font-medium">
+          Services, repairs, damage and losses
+        </h2>
+        <p className="text-sm">
+          A charge for damage, loss, repair or service is checked against these (R9): record what
+          the site team confirms.
+        </p>
+        {events.length === 0 ? (
+          <p>Nothing recorded on this site.</p>
+        ) : (
+          <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
+            <caption className="sr-only">Services, repairs, damage and losses</caption>
+            <thead>
+              <tr className="border-b border-gray-400">
+                <th scope="col">Date</th>
+                <th scope="col">What happened</th>
+                <th scope="col">Fleet code</th>
+                <th scope="col">Description</th>
+                <th scope="col">Confirmed by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <tr key={event.id} className="border-b border-gray-200">
+                  <th scope="row" className="py-2 font-normal whitespace-nowrap">
+                    {event.date}
+                  </th>
+                  <td>{SERVICE_KIND_LABEL[event.kind]}</td>
+                  <td>{event.fleetCode ?? "-"}</td>
+                  <td>{event.description}</td>
+                  <td>{event.confirmedBy ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <ServiceEventForm siteId={site.id} />
       </section>
 
       <section aria-labelledby="new-order-heading" className="flex flex-col gap-3">
