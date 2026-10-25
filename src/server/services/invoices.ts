@@ -4,7 +4,11 @@ import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
 import { fromPence, toPence } from "@/lib/money";
 import { calculateDueDate } from "@/lib/invoices/due-date";
 import { linkInvoiceLine } from "@/lib/invoices/link-line";
-import { invoiceCreateSchema, type InvoiceLineInput } from "@/lib/schemas/invoice";
+import {
+  invoiceCreateSchema,
+  invoiceUpdateSchema,
+  type InvoiceLineInput,
+} from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
 import { checkInvoice, recheckRelatedInvoices, toFindingDto } from "./reconciliation";
 
@@ -184,6 +188,14 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
     exceptInvoiceId: invoice.id,
   });
   return getInvoice(invoice.id);
+}
+
+/** PATCH /api/invoices/:id: payment status (paid, queried...) and check status. */
+export async function updateInvoiceStatus(id: string, body: unknown): Promise<InvoiceDto> {
+  const input = invoiceUpdateSchema.parse(body);
+  await getInvoice(id);
+  await db.invoice.update({ where: { id }, data: input });
+  return getInvoice(id);
 }
 
 /** POST /api/invoices/:id/check: runs the checks again, e.g. after an order was corrected. */
