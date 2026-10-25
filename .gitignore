@@ -30,3 +30,6 @@ playwright/.cache/
 # Misc
 *.pem
 .vercel
+
+# Florin's personal study notes (Romanian, local only)
+docs/explicatii.md
