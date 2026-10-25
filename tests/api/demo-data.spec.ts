@@ -48,3 +48,22 @@ test("the demo credit note closes the R1 finding it credits", async ({ request }
   );
   expect(credited).toHaveLength(2);
 });
+
+test("the demo statement has an example of every R11 problem", async ({ request }) => {
+  const statements = await (await request.get("/api/statements")).json();
+  const demo = statements.find(
+    (s: { supplier: { name: string }; date: string }) =>
+      s.supplier.name === "Apex Plant Hire" && s.date === "2026-10-01",
+  );
+
+  const statement = await (await request.get(`/api/statements/${demo.id}`)).json();
+
+  expect(
+    statement.problems.map((p: { kind: string; invoiceNo: string }) => [p.kind, p.invoiceNo]),
+  ).toEqual([
+    ["PAID_BUT_LISTED", "APX-20703"],
+    ["AMOUNT_DIFFERS", "APX-20819"],
+    ["MISSING_INVOICE", "APX-20850"],
+    ["NOT_ON_STATEMENT", "APX-20830"],
+  ]);
+});

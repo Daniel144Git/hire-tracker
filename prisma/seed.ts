@@ -16,6 +16,7 @@ import { createInvoice, updateInvoiceStatus } from "../src/server/services/invoi
 import { createOrder, offHireOrder, type OrderDto } from "../src/server/services/orders";
 import { createSuspension } from "../src/server/services/suspensions";
 import { setSiteAliases } from "../src/server/services/sites";
+import { createStatement } from "../src/server/services/statements";
 
 const rules = { chargeBankHolidays: true, bankHolidays: ENGLAND_AND_WALES_BANK_HOLIDAYS };
 
@@ -321,8 +322,39 @@ async function main() {
   }
   await updateInvoiceStatus(queried.id, { paymentStatus: "QUERIED", checkStatus: "QUERIED" });
 
+  // The 1 October statement (R11): the open invoices as the supplier lists them, with one
+  // example of each problem. APX-20850 was never received; APX-20819 is listed £10.00 higher;
+  // APX-20703 is paid but still listed; APX-20830 is unpaid here but not on the statement.
+  const held = await db.invoice.findMany({
+    where: { supplierId: apex.id, number: { notIn: ["APX-20701", "APX-20702", "APX-20830"] } },
+    include: { site: { select: { name: true } } },
+    orderBy: [{ date: "asc" }, { number: "asc" }],
+  });
+  const statementLines = held.map((invoice) => ({
+    invoiceDate: invoice.date,
+    jobNo: invoice.jobNo ?? undefined,
+    invoiceNo: invoice.number,
+    customerRef: invoice.site?.name,
+    amount: round2(invoice.grossPence / 100 + (invoice.number === "APX-20819" ? 10 : 0)),
+  }));
+  statementLines.push({
+    invoiceDate: "2026-09-15",
+    jobNo: "J100101",
+    invoiceNo: "APX-20850",
+    customerRef: "Riverside Tower",
+    amount: 336.19,
+  });
+  await createStatement({
+    supplierId: apex.id,
+    date: "2026-10-01",
+    total: round2(statementLines.reduce((total, line) => total + line.amount, 0)),
+    lines: statementLines,
+  });
+
   // R4 shows in the September report: J100101 and J100301 are on hire with no September invoice.
-  console.log("Seeded Apex Plant Hire: 3 sites, 4 hire orders, 10 invoices with demo findings.");
+  console.log(
+    "Seeded Apex Plant Hire: 3 sites, 4 hire orders, 10 invoices and a statement with demo findings.",
+  );
 }
 
 main()

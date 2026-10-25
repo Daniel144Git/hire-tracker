@@ -91,6 +91,34 @@ export interface Invoice {
   hasFile: boolean;
 }
 
+export interface StatementProblem {
+  kind: "MISSING_INVOICE" | "AMOUNT_DIFFERS" | "PAID_BUT_LISTED" | "NOT_ON_STATEMENT";
+  severity: "HIGH" | "MEDIUM";
+  lineId: string | null;
+  invoiceId: string | null;
+  invoiceNo: string;
+  statementAmount: number | null;
+  ourAmount: number | null;
+  message: string;
+}
+
+export interface Statement {
+  id: string;
+  supplier: { id: string; name: string };
+  date: string;
+  isLatest: boolean;
+  total: number | null;
+  hasFile: boolean;
+  lines: {
+    id: string;
+    invoiceNo: string;
+    amount: number;
+    invoice: { id: string; number: string } | null;
+  }[];
+  summary: { lineCount: number; matched: number; problemCount: number; highCount: number };
+  problems: StatementProblem[];
+}
+
 /** What POST /api/invoices/extract returns: a draft invoice read from a PDF. */
 export interface Extraction {
   uploadId: string;
@@ -162,10 +190,29 @@ export class ApiClient {
     return this.post<{ id: string }>(`/api/sites/${siteId}/suspensions`, body);
   }
 
+  async updateInvoice(
+    id: string,
+    body: { paymentStatus?: string; checkStatus?: string },
+  ): Promise<Invoice> {
+    const response = await this.request.patch(`/api/invoices/${id}`, { data: body });
+    expect(response.status(), `PATCH invoice ${id}`).toBe(200);
+    return (await response.json()) as Invoice;
+  }
+
   async getInvoice(id: string): Promise<Invoice> {
     const response = await this.request.get(`/api/invoices/${id}`);
     expect(response.status(), `GET invoice ${id}`).toBe(200);
     return (await response.json()) as Invoice;
+  }
+
+  async createStatement(body: Record<string, unknown>): Promise<Statement> {
+    return this.post("/api/statements", body);
+  }
+
+  async getStatement(id: string): Promise<Statement> {
+    const response = await this.request.get(`/api/statements/${id}`);
+    expect(response.status(), `GET statement ${id}`).toBe(200);
+    return (await response.json()) as Statement;
   }
 
   /** Sends a PDF to be read, as a browser form would. Nothing is saved as an invoice. */

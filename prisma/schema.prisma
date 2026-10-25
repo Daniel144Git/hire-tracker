@@ -85,6 +85,7 @@ model Supplier {
   paymentTermsDays   Int?
   orders             HireOrder[]
   invoices           Invoice[]
+  statements         Statement[]
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 }
@@ -279,4 +280,36 @@ model FleetCodeChange {
 
   @@index([hireItemId])
   @@index([oldCode])
+}
+
+/// A supplier statement: the invoices and credit notes the supplier considers open on its date.
+/// It is compared with our invoices (R11) each time it is shown, never stored as findings.
+model Statement {
+  id         String          @id @default(cuid())
+  supplier   Supplier        @relation(fields: [supplierId], references: [id])
+  supplierId String
+  date       String
+  /// The total printed on the statement, when there is one.
+  totalPence Int?
+  filePath   String?
+  lines      StatementLine[]
+  createdAt  DateTime        @default(now())
+
+  @@unique([supplierId, date])
+}
+
+model StatementLine {
+  id          String    @id @default(cuid())
+  statement   Statement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  statementId String
+  position    Int
+  invoiceDate String
+  jobNo       String?
+  invoiceNo   String
+  customerRef String?
+  /// Debit positive, credit negative.
+  amountPence Int
+
+  @@index([statementId])
+  @@index([invoiceNo])
 }

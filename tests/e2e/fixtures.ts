@@ -9,6 +9,7 @@ import { InvoicesPage } from "./pages/invoices.page";
 import { PaymentsPage } from "./pages/payments.page";
 import { SitePage } from "./pages/site.page";
 import { SitesPage } from "./pages/sites.page";
+import { StatementsPage } from "./pages/statements.page";
 
 type Fixtures = {
   homePage: HomePage;
@@ -19,6 +20,7 @@ type Fixtures = {
   invoicePage: InvoicePage;
   reportPage: DiscrepancyReportPage;
   paymentsPage: PaymentsPage;
+  statementsPage: StatementsPage;
   /** Creates test data through the API, so UI tests only drive the screen they are about. */
   api: ApiClient;
   /** Runs an axe accessibility scan of the current page (WCAG 2.1 A and AA rules). */
@@ -53,6 +55,9 @@ export const test = base.extend<Fixtures>({
   },
   paymentsPage: async ({ page }, use) => {
     await use(new PaymentsPage(page));
+  },
+  statementsPage: async ({ page }, use) => {
+    await use(new StatementsPage(page));
   },
   api: async ({ request }, use) => {
     await use(new ApiClient(request));

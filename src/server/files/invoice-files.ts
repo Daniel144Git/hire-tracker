@@ -4,10 +4,11 @@ import path from "node:path";
 import { NotFoundError, ValidationError } from "@/server/errors";
 
 /**
- * Invoice PDFs are kept on disk, outside the database and outside git:
- *   <INVOICE_FILES_DIR>/uploads/<uploadId>.pdf   read, not yet saved as an invoice
- *   <INVOICE_FILES_DIR>/invoices/<invoiceId>.pdf  kept with a saved invoice
- * Invoice.filePath stores the path relative to INVOICE_FILES_DIR.
+ * Invoice and statement PDFs are kept on disk, outside the database and outside git:
+ *   <INVOICE_FILES_DIR>/uploads/<uploadId>.pdf        read, not yet saved as an invoice
+ *   <INVOICE_FILES_DIR>/invoices/<invoiceId>.pdf       kept with a saved invoice
+ *   <INVOICE_FILES_DIR>/statements/<statementId>.pdf   kept with an imported statement
+ * Invoice.filePath and Statement.filePath store the path relative to INVOICE_FILES_DIR.
  */
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
@@ -71,16 +72,27 @@ export async function keepUploadWithInvoice(uploadId: string, invoiceId: string)
   return filePath;
 }
 
-/** The PDF kept with an invoice. */
-export async function readInvoiceFile(
+/** Keeps a statement's PDF. Returns the path to store on the statement. */
+export async function keepStatementFile(bytes: Uint8Array, statementId: string): Promise<string> {
+  assertPdf(bytes);
+  const filePath = path.join("statements", `${statementId}.pdf`);
+  const target = path.join(root(), filePath);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, bytes);
+  return filePath;
+}
+
+/** A kept PDF, by the path stored on its invoice or statement. */
+export async function readStoredFile(
   filePath: string,
-  invoiceId: string,
+  owner: { resource: string; id: string },
 ): Promise<Uint8Array<ArrayBuffer>> {
+  const notFound = new NotFoundError(`File of ${owner.resource}`, owner.id);
   const file = path.resolve(root(), filePath);
-  if (!file.startsWith(root() + path.sep)) throw new NotFoundError("File of invoice", invoiceId);
+  if (!file.startsWith(root() + path.sep)) throw notFound;
   try {
     return Uint8Array.from(await readFile(file));
   } catch {
-    throw new NotFoundError("File of invoice", invoiceId);
+    throw notFound;
   }
 }
