@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getDiscrepancyReport, reportQuerySchema } from "@/server/services/reports";
+import { getDiscrepancyReport, getQueryEmails, reportQuerySchema } from "@/server/services/reports";
+import { QueryEmail } from "@/app/ui/query-email";
 import { buttonClass } from "@/app/ui/field";
 import { CHECK_LABEL, formatPounds, SEVERITY_LABEL } from "@/app/invoices/format";
 
@@ -62,7 +63,10 @@ async function Report({
 }
 
 async function ReportContent({ month }: { month: string }) {
-  const report = await getDiscrepancyReport({ month });
+  const [report, emails] = await Promise.all([
+    getDiscrepancyReport({ month }),
+    getQueryEmails({ month }),
+  ]);
   const { summary } = report;
   const amount = (value: number | null) => (value === null ? "-" : formatPounds(value));
 
@@ -75,6 +79,22 @@ async function ReportContent({ month }: { month: string }) {
         {formatPounds(summary.overcharged)}
         {summary.resolvedFindings > 0 && `, ${summary.resolvedFindings} resolved`}.
       </p>
+
+      {emails.length > 0 && (
+        <section aria-labelledby="query-emails-heading" className="flex flex-col gap-3">
+          <h2 id="query-emails-heading" className="text-lg font-medium">
+            Query emails
+          </h2>
+          {emails.map((email) => (
+            <QueryEmail
+              key={email.supplier.id}
+              title={`Draft a query email to ${email.supplier.name}`}
+              subject={email.subject}
+              body={email.body}
+            />
+          ))}
+        </section>
+      )}
 
       <section aria-labelledby="report-findings-heading" className="flex flex-col gap-3">
         <h2 id="report-findings-heading" className="text-lg font-medium">

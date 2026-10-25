@@ -10,6 +10,7 @@ import {
   type InvoiceLineInput,
 } from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
+import { draftQueryEmail } from "@/lib/reports/query-email";
 import {
   assertUploadExists,
   keepUploadWithInvoice,
@@ -250,4 +251,14 @@ function toLineData({ rate, net, vat, ...line }: InvoiceLineInput) {
     netPence: toPence(net),
     vatPence: toPence(vat),
   };
+}
+
+/** GET /api/invoices/:id/query-email: a query to the supplier about the open findings. */
+export async function getInvoiceQueryEmail(id: string) {
+  const invoice = await getInvoice(id);
+  const supplier = await db.supplier.findUniqueOrThrow({
+    where: { id: invoice.supplier.id },
+    select: { name: true, accountNo: true },
+  });
+  return { email: draftQueryEmail(supplier, [invoice]) };
 }

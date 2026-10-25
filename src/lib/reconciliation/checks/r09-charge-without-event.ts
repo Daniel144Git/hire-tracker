@@ -28,9 +28,10 @@ export const chargeWithoutEvent: Check = (context) => {
       const what = `${line.description} charged at ${money(line.net)}, but`;
       if (siteId === null) {
         return [
+          // Our records' gap, not the supplier's: low, and left out of query emails.
           finding(
             "R9",
-            "MEDIUM",
+            "LOW",
             line.id,
             `${what} the site is not known, so no service, repair, damage or loss can be matched: link the invoice to a site`,
             { billed: line.net },
@@ -50,7 +51,7 @@ export const chargeWithoutEvent: Check = (context) => {
           "R9",
           "MEDIUM",
           line.id,
-          `${what} no service, repair, damage or loss is recorded on ${siteCode} in the ${DAYS_BEFORE} days before the invoice: ask the site team to confirm it`,
+          `${what} no service, repair, damage or loss is recorded on ${siteCode} in the ${DAYS_BEFORE} days before the invoice: ask for the damage report or the site's confirmation`,
           { billed: line.net },
         ),
       ];

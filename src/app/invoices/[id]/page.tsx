@@ -5,7 +5,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { NotFoundError } from "@/server/errors";
 import { PaymentButtons } from "@/app/payments/payment-buttons";
-import { getInvoice, type InvoiceDto } from "@/server/services/invoices";
+import { getInvoice, getInvoiceQueryEmail, type InvoiceDto } from "@/server/services/invoices";
+import { QueryEmail } from "@/app/ui/query-email";
 import {
   CHARGE_TYPE_LABEL,
   CHECK_LABEL,
@@ -38,6 +39,7 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
   const invoice = await findInvoice(id);
+  const { email } = await getInvoiceQueryEmail(id);
 
   const header: [string, string][] = [
     ["Supplier", invoice.supplier.name],
@@ -88,6 +90,13 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
         </h2>
         <FindingsSummary findings={invoice.findings} />
         {invoice.findings.length > 0 && <FindingsTable findings={invoice.findings} />}
+        {email && (
+          <QueryEmail
+            title="Draft a query email to the supplier"
+            subject={email.subject}
+            body={email.body}
+          />
+        )}
       </section>
       <section aria-labelledby="lines-heading" className="flex flex-col gap-3">
         <h2 id="lines-heading" className="text-lg font-medium">
