@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment variables: never commit secrets
+.env*
+!.env.example
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Local SQLite database (Prisma)
+*.db
+*.db-journal
+
+# OS and logs
+.DS_Store
+*.log
