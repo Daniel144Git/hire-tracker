@@ -68,6 +68,11 @@ Endpoints take and return JSON, except that a PDF is sent as a multipart form an
 | `GET /api/sites/:id/on-hire?asOf=YYYY-MM-DD`             | The site's on-hire register: items on site, days on hire, cost and billed to date                                   | 400, 404                      |
 | `PATCH /api/invoices/:id`                                | Change the payment status (paid, queried, credited) or the check status; nothing else                               | 400, 404                      |
 | `GET /api/payments/due?asOf=YYYY-MM-DD`                  | Unpaid invoices: overdue, due in 7 and 14 days, later; queried ones apart; totals per site                          | 400                           |
+| `GET, POST /api/statements`                              | List statements with how many lines match, or add one as JSON (the lines must add up to `total` when given)         | 400, 409 same date            |
+| `POST /api/statements/upload`                            | Import a statement PDF (multipart field `file`): supplier by account number; refused if it does not add up          | 400                           |
+| `GET /api/statements/:id`                                | The statement's lines and the R11 comparison with our invoices, worked out now                                      | 404                           |
+| `GET /api/statements/:id/file`                           | The statement's PDF                                                                                                 | 404                           |
+| `POST /api/statements/:id/mark-paid`                     | Mark paid our unpaid invoices dated before the statement that it no longer lists                                    | 404                           |
 | `PUT /api/sites/:id/aliases`                             | Replace how suppliers spell the site in the customer reference                                                      | 400, 404, 409 duplicate alias |
 | `GET /api/sites/recognize?customerRef=&deliveryAddress=` | Which site a customer reference and address point to (alias, name, code, postcode)                                  | 400                           |
 | `POST /api/orders/:id/items/:itemId/fleet-code`          | Record a new fleet code (E-code) for a swapped item; links and re-checks the invoices                               | 400, 404                      |
@@ -76,25 +81,26 @@ Endpoints take and return JSON, except that a PDF is sent as a multipart form an
 
 Every invoice is checked as soon as it is saved, and again when something it depends on changes: an off-hire date entered on one of its orders, a credit note or a later invoice of the same orders or job, or a suspension recorded on the site. Each check is a pure function in `src/lib/reconciliation/checks`, with its own unit test file.
 
-| Check | What it finds                                                                                                                                                                                   | Severity                     |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| R1    | Hire billed after the off-hire date; closed automatically when credit notes cover the overcharge                                                                                                | High                         |
-| R2    | Hire billed before the start of hire                                                                                                                                                            | High                         |
-| R3    | The same item billed twice for the same working days                                                                                                                                            | High                         |
-| R5    | A hire line that differs from the agreed rate x chargeable units by more than £0.05                                                                                                             | Medium (Low if undercharged) |
-| R7    | A continuation invoice after the order's return invoice                                                                                                                                         | Medium                       |
-| R10   | Line VAT that is not 20% rounded to the penny, a VAT total that is neither the sum of the lines' VAT nor 20% of the net total (both ways of rounding are allowed), or totals that do not add up | Medium                       |
-| R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing                                                    | Medium (Low if missing)      |
-| R4    | An order on hire for a month with no invoice covering it (monthly report)                                                                                                                       | Report                       |
-| R6    | A weekly rate that changed since the item's previous billing                                                                                                                                    | Medium                       |
-| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order                                                                                       | High / Medium                |
-| R12   | The same item type hired at different weekly rates on different orders                                                                                                                          | Low                          |
-| R14   | A "last invoice" that is not the previous invoice held for the job                                                                                                                              | Medium                       |
-| R15   | A fleet code billed last month that is gone with no return invoice, or new on the job: confirm on site                                                                                          | Medium / Low                 |
-| R16   | A missing or wrong suspension credit on a site with a recorded suspension                                                                                                                       | High / Medium                |
-| R17   | A collection or delivery charged more than once for the same order                                                                                                                              | Medium                       |
+| Check | What it finds                                                                                                                                                                                                                                                             | Severity                     |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| R1    | Hire billed after the off-hire date; closed automatically when credit notes cover the overcharge                                                                                                                                                                          | High                         |
+| R2    | Hire billed before the start of hire                                                                                                                                                                                                                                      | High                         |
+| R3    | The same item billed twice for the same working days                                                                                                                                                                                                                      | High                         |
+| R5    | A hire line that differs from the agreed rate x chargeable units by more than £0.05                                                                                                                                                                                       | Medium (Low if undercharged) |
+| R7    | A continuation invoice after the order's return invoice                                                                                                                                                                                                                   | Medium                       |
+| R10   | Line VAT that is not 20% rounded to the penny, a VAT total that is neither the sum of the lines' VAT nor 20% of the net total (both ways of rounding are allowed), or totals that do not add up                                                                           | Medium                       |
+| R11   | Supplier statement: an invoice on it that is not in Hire Tracker or for another amount (high); an unpaid invoice of ours dated before it that it does not list, or, on the latest statement, an invoice we paid that it still lists (medium). Shown on the statement page | High, Medium                 |
+| R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing                                                                                                                              | Medium (Low if missing)      |
+| R4    | An order on hire for a month with no invoice covering it (monthly report)                                                                                                                                                                                                 | Report                       |
+| R6    | A weekly rate that changed since the item's previous billing                                                                                                                                                                                                              | Medium                       |
+| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order                                                                                                                                                                 | High / Medium                |
+| R12   | The same item type hired at different weekly rates on different orders                                                                                                                                                                                                    | Low                          |
+| R14   | A "last invoice" that is not the previous invoice held for the job                                                                                                                                                                                                        | Medium                       |
+| R15   | A fleet code billed last month that is gone with no return invoice, or new on the job: confirm on site                                                                                                                                                                    | Medium / Low                 |
+| R16   | A missing or wrong suspension credit on a site with a recorded suspension                                                                                                                                                                                                 | High / Medium                |
+| R17   | A collection or delivery charged more than once for the same order                                                                                                                                                                                                        | Medium                       |
 
-The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists every finding on the month's invoices, the amount overcharged on open findings, and the orders on hire with no invoice (R4). R9 (service events) and R11 (supplier statements) come in later phases.
+The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists every finding on the month's invoices, the amount overcharged on open findings, and the orders on hire with no invoice (R4). R11 is shown on each statement's page (`/statements`). R9 (service events) comes in a later phase.
 
 ## Linking invoices to orders and sites
 
@@ -115,26 +121,38 @@ On **Enter an invoice** (`/invoices/new`), choose the supplier's PDF and **Read 
 
 The tests use fictional documents written in the two layouts, as text and as generated PDFs (`tests/support/invoice-documents.ts`). The templates were also checked locally on the real invoices, which never leave the local machine.
 
+## Supplier statements
+
+A supplier statement lists the invoices the supplier considers still open on its date. On **Statements**, import the PDF: the app reads it (the despatch supplier's layout), finds the supplier by the account number printed on it, refuses it if its lines do not add up to its total, and keeps the file. The statement page then shows, worked out against the invoices held now:
+
+- **Not in Hire Tracker**: an invoice on the statement that was never received. Ask the supplier for a copy.
+- **Amount differs**: the statement and the invoice disagree.
+- **Not on the statement**: an invoice we hold as unpaid, dated before the statement, that the supplier no longer lists. It has been paid or settled; one button marks them all paid.
+- **Paid, still listed**: an invoice we marked paid that is still open on the latest statement. Check the payment reached the supplier.
+
+Because the comparison is worked out each time, entering a missing invoice later clears its problem. Checked locally on eight months of real statements and invoices: every line on every statement found, every amount equal, and every invoice on at least one statement.
+
 ## Demo data
 
-`npm run db:reset` loads two suppliers. Summit Access Ltd (account HT014, 20% damage waiver, 30 days) has no data yet: it is there to read contract-layout invoices. Apex Plant Hire (account APX-000123) comes with 3 sites, 4 hire orders and 10 invoices from July to September 2026. The data goes through the app's own services, and it deliberately contains supplier mistakes. An API test checks that every implemented rule finds at least one of them.
+`npm run db:reset` loads two suppliers. Summit Access Ltd (account HT014, 20% damage waiver, 30 days) has no data yet: it is there to read contract-layout invoices. Apex Plant Hire (account APX-000123) comes with 3 sites, 4 hire orders, 10 invoices from July to September 2026 and the 1 October statement. The data goes through the app's own services, and it deliberately contains supplier mistakes. An API test checks that every implemented rule finds at least one of them.
 
-| Invoice                         | Site     | Mistake                                                              | Found by     |
-| ------------------------------- | -------- | -------------------------------------------------------------------- | ------------ |
-| APX-20703, APX-20819, APX-20820 | NGW, RVS | The same outrigger adaptor at £3.50/week and £3.75/week              | R12          |
-| APX-20817                       | RVS      | Lift billed at £52.50/week instead of £50.00                         | R6           |
-| APX-20817                       | RVS      | "Last invoice" APX-20799 is not the previous invoice                 | R14          |
-| APX-20817                       | RVS      | Pipe groover no longer billed, with no return invoice                | R15          |
-| APX-20819                       | RVS      | Platform billed from 10 Aug, delivered 13 Aug                        | R2           |
-| APX-20819                       | RVS      | Billed to 31 Aug after the 27 Aug off-hire, then credited by C-20901 | R1, resolved |
-| APX-20819                       | RVS      | VAT £9.01 on a £45.00 delivery                                       | R10          |
-| APX-20820                       | NGW      | No credit for the 10-day site suspension                             | R16          |
-| APX-20820                       | NGW      | Generator APX-GN-0099 is on no hire order                            | R8, R15      |
-| APX-20820                       | NGW      | Damage waiver £50.00 instead of £47.67                               | R13          |
-| APX-20830                       | MLP      | Collection charged twice                                             | R17          |
-| APX-20905                       | RVS      | Lift billed again for 15-31 Aug, at the wrong rate                   | R3, R5       |
-| APX-20931                       | MLP      | Continuation after the return invoice, a month after off-hire        | R7, R1       |
-| September report                | RVS, NGW | J100101 and J100301 on hire with no September invoice                | R4           |
+| Invoice                         | Site     | Mistake                                                                                                                    | Found by     |
+| ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| APX-20703, APX-20819, APX-20820 | NGW, RVS | The same outrigger adaptor at £3.50/week and £3.75/week                                                                    | R12          |
+| APX-20817                       | RVS      | Lift billed at £52.50/week instead of £50.00                                                                               | R6           |
+| APX-20817                       | RVS      | "Last invoice" APX-20799 is not the previous invoice                                                                       | R14          |
+| APX-20817                       | RVS      | Pipe groover no longer billed, with no return invoice                                                                      | R15          |
+| APX-20819                       | RVS      | Platform billed from 10 Aug, delivered 13 Aug                                                                              | R2           |
+| APX-20819                       | RVS      | Billed to 31 Aug after the 27 Aug off-hire, then credited by C-20901                                                       | R1, resolved |
+| APX-20819                       | RVS      | VAT £9.01 on a £45.00 delivery                                                                                             | R10          |
+| APX-20820                       | NGW      | No credit for the 10-day site suspension                                                                                   | R16          |
+| APX-20820                       | NGW      | Generator APX-GN-0099 is on no hire order                                                                                  | R8, R15      |
+| APX-20820                       | NGW      | Damage waiver £50.00 instead of £47.67                                                                                     | R13          |
+| APX-20830                       | MLP      | Collection charged twice                                                                                                   | R17          |
+| APX-20905                       | RVS      | Lift billed again for 15-31 Aug, at the wrong rate                                                                         | R3, R5       |
+| APX-20931                       | MLP      | Continuation after the return invoice, a month after off-hire                                                              | R7, R1       |
+| September report                | RVS, NGW | J100101 and J100301 on hire with no September invoice                                                                      | R4           |
+| Statement of 1 October          |          | APX-20850 never received; APX-20819 listed £10.00 higher; APX-20703 paid but still listed; APX-20830 unpaid but not listed | R11          |
 
 July is paid, APX-20820 is queried, and the rest is unpaid, which fills the payments page.
 
@@ -149,4 +167,4 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed. Uploaded PDFs go to `INVOICE_FILES_DIR` (default `storage/invoice-files`), which is git-ignored; the tests use `storage/test-invoice-files` and empty it before each run.
 
-Status: Phase 5 in progress. 5a (our order number, site recognition, fleet code changes) and 5b (reading invoice PDFs) are in; next 5c, supplier statements (R11) and the check of past months against them. Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.
+Status: Phase 5 done: our order number, site recognition and fleet code changes (5a), reading invoice PDFs (5b), supplier statements and R11 (5c). Next, Phase 6: monthly cost allocation by site and trade, yearly totals and exports. All data in this repository is fictional.
