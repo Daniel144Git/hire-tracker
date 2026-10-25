@@ -63,9 +63,12 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 
-      # Playwright's webServer runs `npm run start` in CI, which needs a production build.
+      # Playwright's webServer runs `next start` in CI, which needs a production build.
+      # It is built into .next-test, the folder the test server reads from.
       - name: Build the app
         run: npm run build
+        env:
+          NEXT_DIST_DIR: .next-test
 
       - name: API tests
         run: npm run test:api

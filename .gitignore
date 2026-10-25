@@ -33,3 +33,7 @@ playwright/.cache/
 
 # Florin's personal study notes (Romanian, local only)
 docs/explicatii.md
+
+# Prisma generated client
+src/generated/
+.next-test/

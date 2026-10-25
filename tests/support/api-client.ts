@@ -1,0 +1,78 @@
+import { expect, type APIRequestContext } from "@playwright/test";
+import { orderData, siteData, supplierData } from "./test-data";
+
+export interface Site {
+  id: string;
+  code: string;
+  name: string;
+  deliveryAddress: string | null;
+  ordersOnHire: number;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  damageWaiverPct: number;
+}
+
+export interface HireItem {
+  id: string;
+  description: string;
+  fleetCode: string | null;
+  qty: number;
+  weeklyRate: number;
+  isAccessory: boolean;
+}
+
+export interface Order {
+  id: string;
+  supplierJobNo: string;
+  supplier: { id: string; name: string };
+  site: { id: string; code: string; name: string };
+  trade: string;
+  startDate: string;
+  offHireDate: string | null;
+  collectionNo: string | null;
+  damageWaiverApplies: boolean;
+  status: "ON_HIRE" | "OFF_HIRED" | "COLLECTED";
+  items: HireItem[];
+}
+
+/**
+ * Creates test data through the public API, the same way a client would.
+ * Used for setup by both API and E2E tests: setting data up through the UI would be slow
+ * and would make every test depend on screens it is not testing.
+ */
+export class ApiClient {
+  constructor(private readonly request: APIRequestContext) {}
+
+  async createSupplier(overrides: Record<string, unknown> = {}): Promise<Supplier> {
+    return this.post("/api/suppliers", supplierData(overrides));
+  }
+
+  async createSite(overrides: Record<string, unknown> = {}): Promise<Site> {
+    return this.post("/api/sites", siteData(overrides));
+  }
+
+  /** Creates an order; makes its own supplier and site unless they are given. */
+  async createOrder(
+    options: { supplier?: Supplier; site?: Site; overrides?: Record<string, unknown> } = {},
+  ): Promise<Order> {
+    const supplier = options.supplier ?? (await this.createSupplier());
+    const site = options.site ?? (await this.createSite());
+    return this.post(
+      "/api/orders",
+      orderData({ supplierId: supplier.id, siteId: site.id }, options.overrides),
+    );
+  }
+
+  async offHire(orderId: string, body: { offHireDate: string; collectionNo?: string }) {
+    return this.post<Order>(`/api/orders/${orderId}/off-hire`, body, 200);
+  }
+
+  private async post<T>(url: string, data: unknown, expectedStatus = 201): Promise<T> {
+    const response = await this.request.post(url, { data });
+    expect(response.status(), `POST ${url}: ${await response.text()}`).toBe(expectedStatus);
+    return (await response.json()) as T;
+  }
+}

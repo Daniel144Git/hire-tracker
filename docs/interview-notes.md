@@ -30,3 +30,17 @@ What I can explain about this project, phase by phase.
 - **An ambiguous rule made explicit.** The one-week minimum for a short hire across a month end: I chose to add the missing days on the return invoice, documented it in the brief with an example and marked it to confirm against a real invoice.
 - **Rounding is a business rule.** Round once per line, then multiply by quantity; add the damage waiver lines first, then round once. Each choice has a test that would fail with the other choice.
 - **Readable, data-driven tests.** A small builder gives a valid input and each test overrides only what it is about; `it.each` tables cover similar cases without copy-paste.
+
+## Phase 2: sites, hire orders and items
+
+- **One set of rules for the UI and the API.** Route handlers and Server Actions both call the same service layer, and the services validate with the same Zod schemas. A rule cannot be enforced in one channel and forgotten in the other.
+- **Validation at the boundary.** Zod schemas trim and normalise input, reject unknown fields (a typo is a 400, not silently ignored), and give every error a field path such as `items.0.weeklyRate`.
+- **A consistent error contract.** Every error is `{ error: { code, message, issues? } }`: 400 for validation, 404 for a missing resource, 409 for duplicates and for state changes that are not allowed. Clients and tests can rely on the code, not on message text.
+- **State machine as a pure function.** `ON_HIRE -> OFF_HIRED -> COLLECTED` lives in `planOffHire` and `planCollection`, unit-tested without a database; the API maps rule violations to 409.
+- **Data modelling choices.** Dates as `YYYY-MM-DD` strings so they never shift with time zones; money in whole pence so it is never a float; the response fields listed explicitly so a new column is never exposed by accident.
+- **API test design.** 43 Playwright API tests: happy paths, 400, 404 and 409 for every endpoint, including invalid JSON sent as raw bytes. Each test creates its own data through the API with random codes, so tests are independent, parallel-safe and runnable alone.
+- **Test environment isolation.** The tests start their own server on port 3100 with their own database, recreated empty for every run, and their own build folder, so they never touch development data and can run next to `npm run dev`.
+- **Mutation check.** I changed one status code in the error mapping and confirmed that exactly the two tests about it failed.
+- **E2E through Page Objects, setup through the API.** UI tests create their data with an API client and only drive the screen they are about. One E2E test also checks the result through the API, proving the UI change was saved.
+- **Accessibility as a test.** Labelled inputs, errors linked with `aria-describedby`, and an axe scan (WCAG 2.1 A and AA) on each page that fails the test on any violation. Tests assert the accessible description of a field, so the error is checked the way a screen reader user gets it.
+- **Stability check.** I ran the whole Playwright suite three times in a row (165 runs, no failures) before opening the PR.

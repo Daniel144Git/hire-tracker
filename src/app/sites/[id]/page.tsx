@@ -1,0 +1,132 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { NotFoundError } from "@/server/errors";
+import { listOrders, type OrderDto } from "@/server/services/orders";
+import { getSite, type SiteDto } from "@/server/services/sites";
+import { listSuppliers } from "@/server/services/suppliers";
+import { CreateOrderForm } from "./create-order-form";
+import { CollectionForm, OffHireForm } from "./order-forms";
+
+export const metadata: Metadata = { title: "Site" };
+
+export default function SitePage({ params }: PageProps<"/sites/[id]">) {
+  return (
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-10">
+      <Suspense fallback={<p>Loading site…</p>}>
+        <SiteDetails params={params} />
+      </Suspense>
+    </main>
+  );
+}
+
+async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
+  await connection();
+  const { id } = await params;
+  const site = await findSite(id);
+  const [orders, suppliers] = await Promise.all([listOrders({ siteId: id }), listSuppliers()]);
+
+  return (
+    <>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold">
+          {site.code} - {site.name}
+        </h1>
+        {site.deliveryAddress && <p>{site.deliveryAddress}</p>}
+        <p>{site.ordersOnHire} on hire</p>
+      </div>
+
+      <section aria-labelledby="orders-heading" className="flex flex-col gap-3">
+        <h2 id="orders-heading" className="text-lg font-medium">
+          Hire orders
+        </h2>
+        {orders.length === 0 ? (
+          <p>No hire orders on this site yet.</p>
+        ) : (
+          <OrdersTable orders={orders} />
+        )}
+      </section>
+
+      <section aria-labelledby="new-order-heading" className="flex flex-col gap-3">
+        <h2 id="new-order-heading" className="text-lg font-medium">
+          New hire order
+        </h2>
+        <CreateOrderForm
+          siteId={site.id}
+          suppliers={suppliers.map(({ id, name }) => ({ id, name }))}
+        />
+      </section>
+    </>
+  );
+}
+
+async function findSite(id: string): Promise<SiteDto> {
+  try {
+    return await getSite(id);
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    throw error;
+  }
+}
+
+const STATUS_LABEL: Record<OrderDto["status"], string> = {
+  ON_HIRE: "On hire",
+  OFF_HIRED: "Off hired",
+  COLLECTED: "Collected",
+};
+
+function OrdersTable({ orders }: { orders: OrderDto[] }) {
+  return (
+    <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
+      <caption className="sr-only">Hire orders on this site</caption>
+      <thead>
+        <tr className="border-b border-gray-400">
+          <th scope="col" className="py-2">
+            Job no
+          </th>
+          <th scope="col">Items</th>
+          <th scope="col">Trade</th>
+          <th scope="col">Start</th>
+          <th scope="col">Status</th>
+          <th scope="col">Off-hire</th>
+          <th scope="col">Collection no</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((order) => (
+          <tr key={order.id} className="border-b border-gray-200 align-top">
+            <th scope="row" className="py-2 font-medium">
+              {order.supplierJobNo}
+            </th>
+            <td>
+              <ul>
+                {order.items.map((item) => (
+                  <li key={item.id}>
+                    {item.qty > 1 && `${item.qty} x `}
+                    {item.description}
+                    {item.fleetCode && ` (${item.fleetCode})`} £{item.weeklyRate.toFixed(2)}/wk
+                  </li>
+                ))}
+              </ul>
+            </td>
+            <td>{order.trade}</td>
+            <td className="whitespace-nowrap">{order.startDate}</td>
+            <td className="whitespace-nowrap">{STATUS_LABEL[order.status]}</td>
+            <td className="whitespace-nowrap">{order.offHireDate ?? "-"}</td>
+            <td>{order.collectionNo ?? "-"}</td>
+            <td>
+              {order.status === "ON_HIRE" && (
+                <OffHireForm orderId={order.id} jobNo={order.supplierJobNo} />
+              )}
+              {order.status === "OFF_HIRED" && (
+                <CollectionForm orderId={order.id} jobNo={order.supplierJobNo} />
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}

@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const isCI = !!process.env.CI;
-const port = Number(process.env.PORT ?? 3000);
+// Tests use their own port and database, so they never touch the data of `npm run dev`.
+const port = Number(process.env.PORT ?? 3100);
 const baseURL = process.env.BASE_URL ?? `http://localhost:${port}`;
 
 export default defineConfig({
@@ -34,12 +35,16 @@ export default defineConfig({
     },
   ],
 
-  // Starts the app before the tests and waits until /api/health answers.
+  // Recreates an empty test database, starts the app on it, and waits until /api/health answers.
   // CI runs the production build (built in an earlier step); locally we use the dev server.
   webServer: {
-    command: isCI ? "npm run start" : "npm run dev",
+    command: `npm run db:test:prepare && ${isCI ? "npx next start" : "npx next dev"} --port ${port}`,
     url: `${baseURL}/api/health`,
     reuseExistingServer: !isCI,
     timeout: 120_000,
+    env: {
+      DATABASE_URL: "file:./prisma/test.db",
+      NEXT_DIST_DIR: ".next-test",
+    },
   },
 });

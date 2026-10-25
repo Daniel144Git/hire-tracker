@@ -13,10 +13,15 @@ Requires Node.js 24 (see `.nvmrc`; with nvm, run `nvm use`).
 ```bash
 npm install
 npx playwright install chromium
+cp .env.example .env
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-Then open http://localhost:3000. The API and E2E tests start the app themselves if it is not already running.
+Then open http://localhost:3000/sites. The seed adds fictional demo data: the supplier Apex Plant Hire, three sites and two hire orders on RVS - Riverside Tower.
+
+The API and E2E tests start their own server on port 3100 with a separate database (`prisma/test.db`), recreated empty for every run, so they never touch your demo data.
 
 | Command                | What it does                                                     |
 | ---------------------- | ---------------------------------------------------------------- |
@@ -32,6 +37,23 @@ Then open http://localhost:3000. The API and E2E tests start the app themselves 
 | `npm run test:e2e`     | Runs the end-to-end UI tests (Playwright, Chromium)              |
 | `npm run test:report`  | Opens the last Playwright HTML report                            |
 
+## API
+
+All endpoints take and return JSON. Money is in pounds, dates are `YYYY-MM-DD`. Every error has the same shape: `{ "error": { "code", "message", "issues"? } }`.
+
+| Method and path                   | What it does                                        | Errors                        |
+| --------------------------------- | --------------------------------------------------- | ----------------------------- |
+| `GET /api/health`                 | Health check                                        |                               |
+| `GET, POST /api/suppliers`        | List or create suppliers and their charging profile | 400, 409 duplicate name       |
+| `GET, POST /api/sites`            | List or create sites                                | 400, 409 duplicate code       |
+| `GET, PATCH /api/sites/:id`       | Get or edit a site                                  | 400, 404, 409                 |
+| `GET /api/orders?siteId=&status=` | List hire orders, filtered by site and status       | 400                           |
+| `POST /api/orders`                | Create a hire order with its items                  | 400, 409 duplicate job number |
+| `GET, PATCH /api/orders/:id`      | Get an order, or change its trade or damage waiver  | 400, 404                      |
+| `POST /api/orders/:id/items`      | Add an item or accessory to an order                | 400, 404                      |
+| `POST /api/orders/:id/off-hire`   | Off-hire: date and optional collection number       | 400, 404, 409 not on hire     |
+| `POST /api/orders/:id/collection` | Record the collection of an off-hired order         | 400, 404, 409 not off-hired   |
+
 ## Continuous integration
 
 GitHub Actions runs on every pull request and on every push to `main` (`.github/workflows/ci.yml`):
@@ -43,4 +65,4 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
 
-Status: Phase 1 (charge calculator). The expected charge of a hire line and the damage waiver are calculated in `src/lib/charging`, built test-first. All data in this repository is fictional.
+Status: Phase 2 (sites, hire orders and items). Phase 1 added the charge calculator in `src/lib/charging`, built test-first. All data in this repository is fictional.

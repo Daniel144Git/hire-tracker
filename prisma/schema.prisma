@@ -1,0 +1,96 @@
+// Data model for Hire Tracker. See docs/BRIEF.md, section 5.
+//
+// Conventions:
+// - Calendar dates (start of hire, off-hire, despatch) are "YYYY-MM-DD" strings, never DateTime:
+//   they are days, not instants, and must not shift with time zones.
+// - Money is stored as whole pence (Int), never as a floating-point number.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Trade {
+  MECH
+  ELEC
+  VENT
+  BMS
+}
+
+enum PaymentTerms {
+  END_OF_NEXT_MONTH
+  NET_N
+}
+
+enum OrderStatus {
+  ON_HIRE
+  OFF_HIRED
+  COLLECTED
+}
+
+model Supplier {
+  id                 String       @id @default(cuid())
+  name               String       @unique
+  accountNo          String?
+  chargeBankHolidays Boolean      @default(true)
+  minChargeDays      Int          @default(5)
+  damageWaiverPct    Float        @default(10)
+  paymentTerms       PaymentTerms @default(END_OF_NEXT_MONTH)
+  paymentTermsDays   Int?
+  orders             HireOrder[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model Site {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  name            String
+  deliveryAddress String?
+  orders          HireOrder[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model HireOrder {
+  id                  String      @id @default(cuid())
+  supplierJobNo       String
+  supplier            Supplier    @relation(fields: [supplierId], references: [id])
+  supplierId          String
+  site                Site        @relation(fields: [siteId], references: [id])
+  siteId              String
+  trade               Trade
+  startDate           String
+  offHireDate         String?
+  collectionNo        String?
+  offHireEnteredAt    DateTime?
+  damageWaiverApplies Boolean
+  status              OrderStatus @default(ON_HIRE)
+  items               HireItem[]
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  // The supplier's job number identifies one hire order and stays the same on every invoice.
+  @@unique([supplierId, supplierJobNo])
+  @@index([siteId, status])
+}
+
+model HireItem {
+  id              String    @id @default(cuid())
+  order           HireOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         String
+  description     String
+  fleetCode       String?
+  qty             Int       @default(1)
+  weeklyRatePence Int
+  despatchNo      String?
+  despatchDate    String?
+  isAccessory     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@index([fleetCode])
+}

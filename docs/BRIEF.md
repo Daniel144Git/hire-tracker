@@ -163,6 +163,15 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 
 This may be refined; changes go in this file.
 
+**Implemented so far (Phase 2, `prisma/schema.prisma`):** `Supplier`, `Site`, `HireOrder` and `HireItem`, with these refinements:
+
+- Calendar dates (`startDate`, `offHireDate`, `despatchDate`) are `YYYY-MM-DD` strings, not timestamps: they are days and must not shift with time zones. Money is stored in whole pence (`weeklyRatePence`); the API takes and returns pounds.
+- `HireOrder.status` moves only forward, `ON_HIRE -> OFF_HIRED -> COLLECTED`, through the off-hire and collection endpoints; it cannot be edited directly. Off-hire with a collection number goes straight to `COLLECTED`. The off-hire date cannot be before the start of hire and can only be set once.
+- `(supplierId, supplierJobNo)` is unique: a job number identifies one hire order of one supplier.
+- `offHireEnteredBy` is replaced for now by `offHireEnteredAt` (a timestamp); users and roles come in phase 8.
+- `damageWaiverApplies` defaults to true when the supplier charges a damage waiver (`damageWaiverPct > 0`).
+- `Site.aliases` comes with invoice extraction in phase 5, where customer references are normalised.
+
 ## 6. Tech stack
 
 - **TypeScript** everywhere.
