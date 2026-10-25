@@ -14,12 +14,19 @@
     "test:watch": "vitest",
     "test:api": "playwright test --project=api",
     "test:e2e": "playwright test --project=e2e",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:test:prepare": "node scripts/reset-test-db.mjs"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/client": "7.10.1",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
@@ -27,11 +34,14 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "18.0.9",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.9.10",
+    "prisma": "7.10.1",
     "tailwindcss": "^4",
+    "tsx": "4.23.15",
     "typescript": "^5",
     "vitest": "5.0.5"
   },
@@ -40,6 +50,10 @@
   },
   "allowScripts": {
     "unrs-resolver": false,
-    "fsevents": false
+    "fsevents": false,
+    "better-sqlite3@12.11.1": true,
+    "@prisma/engines@7.10.1": true,
+    "prisma@7.10.1": true,
+    "esbuild": false
   }
 }
