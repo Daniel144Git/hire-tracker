@@ -1,6 +1,10 @@
-import { expectedHireCharge } from "@/lib/charging/hire-charge";
+import { expectedHireCharge, type ChargingRules } from "@/lib/charging/hire-charge";
+import type { IsoDate } from "@/lib/charging/iso-date";
+import { countChargeableDays } from "@/lib/charging/working-days";
 import { round2 } from "@/lib/money";
 import {
+  dayAfter,
+  dayBefore,
   differsBeyond,
   finding,
   isBefore,
@@ -11,7 +15,7 @@ import {
   weeklyRateOf,
   weeksAndDays,
 } from "../helpers";
-import type { Check } from "../types";
+import type { Check, CheckOrder } from "../types";
 
 /**
  * R5: a hire line whose amount differs from the agreed rate x chargeable units by more than
@@ -24,10 +28,7 @@ export const amountDiffersFromExpected: Check = (context) =>
     const period = periodOf(line);
     const weeklyRate = weeklyRateOf(context, line);
     if (!order || !period || weeklyRate === undefined) return [];
-    const outsideHire =
-      isBefore(period.from, order.startDate) ||
-      (order.offHireDate !== null && isBefore(order.offHireDate, period.to));
-    if (outsideHire) return [];
+    if (hasChargeableDaysOutsideHire(period, order, context.rules)) return [];
 
     const expected = expectedHireCharge({
       weeklyRate,
@@ -50,3 +51,29 @@ export const amountDiffersFromExpected: Check = (context) =>
       ),
     ];
   });
+
+/** True when R1 or R2 reports this period: chargeable days before the start or after off-hire. */
+function hasChargeableDaysOutsideHire(
+  period: { from: IsoDate; to: IsoDate },
+  order: CheckOrder,
+  rules: ChargingRules,
+): boolean {
+  const before =
+    isBefore(period.from, order.startDate) &&
+    countChargeableDays(
+      period.from,
+      isBefore(period.to, order.startDate) ? period.to : dayBefore(order.startDate),
+      rules,
+    ) > 0;
+  const after =
+    order.offHireDate !== null &&
+    isBefore(order.offHireDate, period.to) &&
+    countChargeableDays(
+      isBefore(period.from, dayAfter(order.offHireDate))
+        ? dayAfter(order.offHireDate)
+        : period.from,
+      period.to,
+      rules,
+    ) > 0;
+  return before || after;
+}
