@@ -172,6 +172,13 @@ This may be refined; changes go in this file.
 - `damageWaiverApplies` defaults to true when the supplier charges a damage waiver (`damageWaiverPct > 0`).
 - `Site.aliases` comes with invoice extraction in phase 5, where customer references are normalised.
 
+**Implemented in Phase 3:** `Invoice` and `InvoiceLine`.
+
+- An invoice is recorded **exactly as printed**, totals included, even when they are wrong: finding mistakes is the job of the checks (R10 and others), not of data entry. Credit lines can be negative and their period can be printed with From after To.
+- An invoice number is unique per supplier (duplicate protection, 409). The same number from another supplier is accepted.
+- The due date is taken from the invoice when printed, otherwise calculated from the supplier's payment terms.
+- `Invoice.jobNo` holds the job number printed in the header. Each line is linked when it is saved: a line with a fleet code to the item with that code (first within the header's job, otherwise the only item with that code), a line without one (damage waiver, transport) to the job's order. A line that cannot be linked keeps `linkProblem`: `UNKNOWN_FLEET_CODE`, `AMBIGUOUS_FLEET_CODE` or `UNKNOWN_JOB_NO`. These feed R8 and R15 in phase 4.
+
 ## 6. Tech stack
 
 - **TypeScript** everywhere.

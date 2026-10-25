@@ -44,3 +44,14 @@ What I can explain about this project, phase by phase.
 - **E2E through Page Objects, setup through the API.** UI tests create their data with an API client and only drive the screen they are about. One E2E test also checks the result through the API, proving the UI change was saved.
 - **Accessibility as a test.** Labelled inputs, errors linked with `aria-describedby`, and an axe scan (WCAG 2.1 A and AA) on each page that fails the test on any violation. Tests assert the accessible description of a field, so the error is checked the way a screen reader user gets it.
 - **Stability check.** I ran the whole Playwright suite three times in a row (165 runs, no failures) before opening the PR.
+
+## Phase 3: invoices and invoice lines
+
+- **Record what was billed, check it later.** Invoices are stored exactly as printed, wrong totals included. Rejecting them at entry would hide the very overcharges the app exists to find; the reconciliation checks report them instead.
+- **Duplicate protection in two layers.** The service checks for the supplier's invoice number and returns a clear 409; a unique database constraint backs it up. A mutation test showed the difference: with the service check removed, the database still refused the duplicate, but with a generic error, and the test caught it.
+- **Linking as a pure function.** `linkInvoiceLine` decides which order and item a line belongs to (fleet code first within the invoice's job, then a unique match; job number for lines without a fleet code) and returns the reason when it cannot. Eight unit tests cover every branch without a database.
+- **Domain rules tested at the edges.** Due dates at month ends, February in a leap year and across the year end, for both payment-term types; credit lines with negative amounts and backwards periods.
+- **Dynamic forms that stay testable.** The invoice form adds and removes lines; each line is a labelled fieldset ("Line 2"), so tests target `getByRole("group", { name: "Line 2" }).getByLabel("Net (£)")` and errors point at the exact field of the exact line.
+- **Strict locators catch ambiguity.** "Invoice number" also matched "Last invoice number"; Playwright's strict mode failed the test instead of filling the wrong field, and `exact: true` fixed it.
+- **Choosing the locator honestly.** Where an element has no role and name to find it by (a value in a definition list), I used a `data-testid` rather than an XPath chain, and documented why in the Page Object.
+- **Looking at the screen.** A headless screenshot showed "4 wks 1 days", which no test asserted; fixed to match the invoices' "4 wks 1 day".
