@@ -260,6 +260,7 @@ const SITE_SOURCE: Record<string, string> = {
   ALIAS: "recognised from a recorded spelling",
   NAME: "recognised from the site name",
   CODE: "recognised from the site code",
+  ADDRESS: "recognised from the delivery address",
   POSTCODE: "recognised from the delivery postcode",
 };
 
