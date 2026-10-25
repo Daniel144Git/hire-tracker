@@ -2,6 +2,7 @@ import type {
   CheckInvoice,
   CheckLine,
   CheckOrder,
+  CheckServiceEvent,
   CheckSuspension,
   ReconciliationContext,
   SupplierItem,
@@ -79,6 +80,7 @@ export function invoice(overrides: Partial<CheckInvoice> = {}): CheckInvoice {
     jobNo: "J100101",
     orderRef: null,
     lastInvoiceNo: null,
+    siteId: null,
     gross: sum([net, vat]),
     ...overrides,
     lines,
@@ -94,6 +96,7 @@ export function context(
     otherInvoices?: CheckInvoice[];
     supplierItems?: SupplierItem[];
     suspensions?: CheckSuspension[];
+    serviceEvents?: CheckServiceEvent[];
     rules?: Partial<ReconciliationContext["rules"]>;
     tolerance?: number;
   } = {},
@@ -115,6 +118,7 @@ export function context(
         })),
       ),
     suspensions: overrides.suspensions ?? [],
+    serviceEvents: overrides.serviceEvents ?? [],
     rules: {
       chargeBankHolidays: true,
       bankHolidays: ["2026-08-31"],
