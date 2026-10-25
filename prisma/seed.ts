@@ -16,6 +16,7 @@ import { createInvoice, updateInvoiceStatus } from "../src/server/services/invoi
 import { createOrder, offHireOrder, type OrderDto } from "../src/server/services/orders";
 import { createSuspension } from "../src/server/services/suspensions";
 import { setSiteAliases } from "../src/server/services/sites";
+import { createServiceEvent } from "../src/server/services/service-events";
 import { createStatement } from "../src/server/services/statements";
 
 const rules = { chargeBankHolidays: true, bankHolidays: ENGLAND_AND_WALES_BANK_HOLIDAYS };
@@ -196,7 +197,7 @@ async function main() {
   const invoice = async (
     number: string,
     date: string,
-    type: "CONTINUATION" | "RETURN",
+    type: "CONTINUATION" | "RETURN" | "SALE",
     jobNo: string,
     lines: Line[],
     extra: { lastInvoiceNo?: string; isCreditNote?: boolean; customerRef?: string } = {},
@@ -316,6 +317,21 @@ async function main() {
     lastInvoiceNo: "APX-20830",
   });
 
+  // R9 a damage charge on RVS with nothing recorded on site; the same charge on NGW is matched
+  // by the damage the site team recorded.
+  await createServiceEvent(ngw.id, {
+    date: "2026-09-08",
+    kind: "DAMAGE",
+    description: "Generator panel cracked by a delivery van",
+    confirmedBy: "Site manager",
+  });
+  await invoice("APX-20940", "2026-09-12", "SALE", "J100101", [
+    { description: "Guard rail damaged beyond repair", chargeType: "OTHER", net: 85, vat: 17 },
+  ]);
+  await invoice("APX-20941", "2026-09-12", "SALE", "J100301", [
+    { description: "Generator panel replaced", chargeType: "OTHER", net: 140, vat: 28 },
+  ]);
+
   // Payments: July is paid; the NGW invoice with the most findings is queried with the supplier.
   for (const paid of [july1, july2, july3]) {
     await updateInvoiceStatus(paid.id, { paymentStatus: "PAID" });
@@ -353,7 +369,7 @@ async function main() {
 
   // R4 shows in the September report: J100101 and J100301 are on hire with no September invoice.
   console.log(
-    "Seeded Apex Plant Hire: 3 sites, 4 hire orders, 10 invoices and a statement with demo findings.",
+    "Seeded Apex Plant Hire: 3 sites, 4 hire orders, 12 invoices and a statement with demo findings.",
   );
 }
 

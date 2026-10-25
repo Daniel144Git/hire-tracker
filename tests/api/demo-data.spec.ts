@@ -11,6 +11,7 @@ const IMPLEMENTED_CHECKS = [
   "R6",
   "R7",
   "R8",
+  "R9",
   "R10",
   "R12",
   "R13",

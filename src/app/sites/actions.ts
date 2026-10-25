@@ -10,6 +10,7 @@ import {
   recordCollection,
 } from "@/server/services/orders";
 import { setSiteAliases } from "@/server/services/sites";
+import { createServiceEvent } from "@/server/services/service-events";
 import { createSuspension } from "@/server/services/suspensions";
 
 // Server Actions for the sites pages. Each one reads the form, calls the same service as the
@@ -144,5 +145,26 @@ export async function changeFleetCodeAction(
     return { status: "success", message: `${changed.description} is now ${changed.fleetCode}` };
   } catch (error) {
     return toFormState(error, { item: item ?? "", ...values });
+  }
+}
+
+export async function createServiceEventAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { siteId, ...values } = readForm(formData, [
+    "siteId",
+    "date",
+    "kind",
+    "fleetCode",
+    "description",
+    "confirmedBy",
+  ]);
+  try {
+    await createServiceEvent(siteId ?? "", values);
+    refresh();
+    return { status: "success", message: "Event recorded: the site's invoices were re-checked" };
+  } catch (error) {
+    return toFormState(error, values);
   }
 }

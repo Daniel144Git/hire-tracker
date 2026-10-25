@@ -9,6 +9,7 @@ import type { Finding as FindingRow, Prisma } from "@/generated/prisma/client";
 
 const invoiceForChecks = {
   lines: { orderBy: { position: "asc" } },
+  site: { select: { id: true, code: true } },
 } satisfies Prisma.InvoiceInclude;
 
 type InvoiceRow = Prisma.InvoiceGetPayload<{ include: typeof invoiceForChecks }>;
@@ -23,6 +24,8 @@ function toCheckInvoice(invoice: InvoiceRow): CheckInvoice {
     jobNo: invoice.jobNo,
     orderRef: invoice.orderRef,
     lastInvoiceNo: invoice.lastInvoiceNo,
+    siteId: invoice.site?.id ?? null,
+    siteCode: invoice.site?.code ?? null,
     net: fromPence(invoice.netPence),
     vat: fromPence(invoice.vatPence),
     gross: fromPence(invoice.grossPence),
@@ -80,7 +83,13 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
       site: { select: { id: true, code: true } },
     },
   });
-  const [supplierItems, suspensions] = await Promise.all([
+  const siteIds = [
+    ...new Set([
+      ...orders.map((order) => order.siteId),
+      ...(invoice.siteId ? [invoice.siteId] : []),
+    ]),
+  ];
+  const [supplierItems, suspensions, serviceEvents] = await Promise.all([
     db.hireItem.findMany({
       where: { order: { supplierId: supplier.id } },
       select: {
@@ -93,6 +102,10 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
     db.suspension.findMany({
       where: { siteId: { in: [...new Set(orders.map((order) => order.siteId))] } },
       include: { site: { select: { code: true } } },
+    }),
+    db.serviceEvent.findMany({
+      where: { siteId: { in: siteIds } },
+      select: { siteId: true, date: true, kind: true, fleetCode: true },
     }),
   ]);
 
@@ -129,6 +142,7 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
       periodTo: suspension.periodTo,
       freeDays: suspension.freeDays,
     })),
+    serviceEvents,
     rules: chargingRulesOf(supplier),
     tolerance: DEFAULT_TOLERANCE,
     vatRate: STANDARD_VAT_RATE,
