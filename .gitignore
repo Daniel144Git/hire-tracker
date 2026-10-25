@@ -40,3 +40,6 @@ src/generated/
 
 # Real documents (invoices, statements, spreadsheet): local only, never committed
 private/
+
+# invoice PDFs uploaded to the app (real documents, never committed)
+storage/

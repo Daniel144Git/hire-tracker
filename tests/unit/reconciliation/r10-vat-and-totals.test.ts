@@ -58,9 +58,10 @@ describe("R10: VAT per line and invoice totals", () => {
     ]);
   });
 
-  describe("rounding (brief 4.3): VAT is rounded per line and the total is the sum", () => {
-    // Three lines of £0.13: each VAT is £0.026, rounded to £0.03, so the VAT total is £0.09,
-    // while 20% of the £0.39 net total would be £0.078, rounded to £0.08.
+  describe("rounding (brief 4.3): VAT rounded per line, or once on the net total", () => {
+    // Three lines of £0.13: each VAT is £0.026, rounded to £0.03, so the sum is £0.09, while
+    // 20% of the £0.39 net total is £0.078, rounded to £0.08. Both ways are allowed, and real
+    // supplier invoices use the second one.
     const lines = [1, 2, 3].map((n) =>
       hireLine({ id: `line-${n}`, position: n, net: 0.13, vat: 0.03 }),
     );
@@ -69,14 +70,31 @@ describe("R10: VAT per line and invoice totals", () => {
       expect(vatAndTotals(context({ invoice: invoice({ lines, vat: 0.09 }) }))).toEqual([]);
     });
 
-    it("flags a VAT total of £0.08, 20% of the net total, as not the sum of the lines", () => {
+    it("accepts a VAT total of £0.08, 20% of the net total rounded once", () => {
+      expect(vatAndTotals(context({ invoice: invoice({ lines, vat: 0.08 }) }))).toEqual([]);
+    });
+
+    it("flags a VAT total that is neither", () => {
       const findings = vatAndTotals(
-        context({ invoice: invoice({ lines, vat: 0.08, gross: 0.47 }) }),
+        context({ invoice: invoice({ lines, vat: 0.07, gross: 0.46 }) }),
       );
 
       expect(findings).toEqual([
-        expect.objectContaining({ message: "VAT total £0.08 is not the sum of the lines, £0.09" }),
+        expect.objectContaining({
+          message:
+            "VAT total £0.07 is neither the sum of the lines, £0.09, nor 20% of the net total, £0.08",
+          billed: 0.07,
+          expected: 0.09,
+          difference: -0.02,
+        }),
       ]);
+    });
+
+    it("leaves charges outside the scope of VAT out of the net total it takes 20% of", () => {
+      const withDamage = [...lines, line({ chargeType: "OTHER", net: 100, vat: 0 })];
+      expect(vatAndTotals(context({ invoice: invoice({ lines: withDamage, vat: 0.08 }) }))).toEqual(
+        [],
+      );
     });
   });
 

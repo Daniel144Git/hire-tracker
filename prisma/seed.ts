@@ -82,6 +82,19 @@ async function main() {
     update: {},
     create: { name: "Apex Plant Hire", accountNo: "APX-000123", damageWaiverPct: 10 },
   });
+  // A second supplier, whose invoices are in the "contract" layout: 20% damage waiver, paid
+  // 30 days after the invoice date. No orders yet: upload one of its invoices to try reading.
+  await db.supplier.upsert({
+    where: { name: "Summit Access Ltd" },
+    update: {},
+    create: {
+      name: "Summit Access Ltd",
+      accountNo: "HT014",
+      damageWaiverPct: 20,
+      paymentTerms: "NET_N",
+      paymentTermsDays: 30,
+    },
+  });
   if ((await db.invoice.count({ where: { supplierId: apex.id } })) > 0) {
     console.log("Demo data already present. Run `npm run db:reset` to start again.");
     return;

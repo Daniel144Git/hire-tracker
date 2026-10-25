@@ -26,10 +26,16 @@ export interface InvoiceEntry {
   lines: InvoiceLineEntry[];
 }
 
-/** Page Object for "/invoices/new": the header and any number of lines. */
+/** Page Object for "/invoices/new": reading a PDF, then the header and any number of lines. */
 export class InvoiceFormPage {
   readonly heading: Locator;
+  readonly pdfSection: Locator;
+  /** The result of reading a PDF: a status message, or an alert when it could not be read. */
+  readonly pdfMessage: Locator;
+  /** "Check before saving": what the app could not read or what does not add up. */
+  readonly warnings: Locator;
   readonly form: Locator;
+  readonly supplierSelect: Locator;
   readonly numberInput: Locator;
   readonly addLineButton: Locator;
   readonly saveButton: Locator;
@@ -37,7 +43,11 @@ export class InvoiceFormPage {
 
   constructor(private readonly page: Page) {
     this.heading = page.getByRole("heading", { level: 1, name: "Enter an invoice" });
-    this.form = page.getByRole("form", { name: "Invoice" });
+    this.pdfSection = page.getByRole("region", { name: "Read an invoice PDF" });
+    this.pdfMessage = this.pdfSection.getByRole("status").or(this.pdfSection.getByRole("alert"));
+    this.warnings = page.getByRole("region", { name: "Check before saving" }).getByRole("listitem");
+    this.form = page.getByRole("form", { name: "Invoice", exact: true });
+    this.supplierSelect = this.form.getByLabel("Supplier", { exact: true });
     this.numberInput = this.form.getByLabel("Invoice number", { exact: true });
     this.addLineButton = this.form.getByRole("button", { name: "Add line" });
     this.saveButton = this.form.getByRole("button", { name: "Save invoice" });
@@ -48,6 +58,16 @@ export class InvoiceFormPage {
     await this.page.goto("/invoices/new");
   }
 
+  /** Chooses a PDF and reads it; the form below fills in from it. */
+  async readPdf(name: string, pdf: Uint8Array): Promise<void> {
+    await this.pdfSection.getByLabel("Invoice PDF").setInputFiles({
+      name,
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdf),
+    });
+    await this.pdfSection.getByRole("button", { name: "Read PDF" }).click();
+  }
+
   /** The fieldset of one line, e.g. line(1) is "Line 1". */
   line(number: number): Locator {
     return this.form.getByRole("group", { name: `Line ${number}`, exact: true });
@@ -55,14 +75,12 @@ export class InvoiceFormPage {
 
   async fillHeader(invoice: Omit<InvoiceEntry, "lines">): Promise<void> {
     const form = this.form;
-    await form
-      .getByLabel("Supplier", { exact: true })
-      .selectOption({ label: invoice.supplierName });
+    await this.supplierSelect.selectOption({ label: invoice.supplierName });
     await this.numberInput.fill(invoice.number);
     await form.getByLabel("Type", { exact: true }).selectOption({ label: invoice.type });
     await form.getByLabel("Invoice date").fill(invoice.date);
     if (invoice.orderRef)
-      await form.getByLabel("Our ref (our order number)").fill(invoice.orderRef);
+      await form.getByLabel("Our order number (optional)").fill(invoice.orderRef);
     if (invoice.jobNo) await form.getByLabel("Job number").fill(invoice.jobNo);
     await form.getByLabel("Net total (£)").fill(String(invoice.net));
     await form.getByLabel("VAT total (£)").fill(String(invoice.vat));

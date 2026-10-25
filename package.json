@@ -27,6 +27,7 @@
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "unpdf": "1.8.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -40,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "eslint-config-prettier": "10.1.8",
+    "pdf-lib": "1.17.1",
     "prettier": "3.9.10",
     "prisma": "7.10.1",
     "tailwindcss": "^4",

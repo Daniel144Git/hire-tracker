@@ -45,7 +45,7 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
     ["Invoice date", invoice.date],
     ["Due date", invoice.dueDate],
     ["Site", siteText(invoice)],
-    ["Our ref", invoice.orderRef ?? "-"],
+    ["Our order number", invoice.orderRef ?? "-"],
     ["Job number", invoice.jobNo ?? "-"],
     ["Last invoice number", invoice.lastInvoiceNo ?? "-"],
     ["Customer reference", invoice.customerRef ?? "-"],
@@ -58,6 +58,17 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <h1 className="text-2xl font-semibold">Invoice {invoice.number}</h1>
+      {invoice.hasFile && (
+        <p>
+          {/* An API route, not a page: a plain link opens the PDF in the browser. */}
+          <a
+            href={`/api/invoices/${invoice.id}/file`}
+            className="text-blue-700 underline dark:text-blue-400"
+          >
+            Open the invoice PDF
+          </a>
+        </p>
+      )}
       <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1">
         {header.map(([term, value]) => (
           <div key={term} className="contents">
@@ -249,6 +260,7 @@ const SITE_SOURCE: Record<string, string> = {
   ALIAS: "recognised from a recorded spelling",
   NAME: "recognised from the site name",
   CODE: "recognised from the site code",
+  ADDRESS: "recognised from the delivery address",
   POSTCODE: "recognised from the delivery postcode",
 };
 

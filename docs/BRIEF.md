@@ -44,7 +44,7 @@ The project is inspired by real procurement work, but **all data in this repo is
 
 ### Later (phases 5-8)
 
-8. Upload invoice PDF, AI extraction of the lines (mock in tests, an AI API for real use), review screen. Statement import and R11.
+8. Upload invoice PDF, read it into the invoice form (one template per supplier layout; AI only as a later fallback), review screen. Statement import and R11.
 9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export. The monthly export also groups the invoice PDFs by site: a ZIP with one folder per site (e.g. `RVS - Riverside Tower/`), each holding that site's invoices and a CSV summary (requested by Florin; Google Drive folders are an option if the connector is set up).
 10. Service events and the "service billed but not recorded" check.
 11. Draft a query email to the hire company from the discrepancy report.
@@ -139,9 +139,9 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 
 ### 4.3 VAT and rounding
 
-- VAT is calculated **per line, rounded to the penny**; totals are the sum of rounded lines.
-- Reports always use the per-line figure, so they match the invoices exactly.
-- Tests must prove that `sum(rounded line VAT)` can differ from `round(net total × 0.2)` and that the report uses the former. (This exact few-pence discrepancy breaks real monthly cost reports.)
+- A supplier may round VAT **per line** (the VAT total is the sum of the rounded lines) or **once on the net total**; both are allowed. The real invoices checked in phase 5b round once on the total, a penny or so from the sum of the lines.
+- Each line's VAT is stored rounded per line. R10 accepts a VAT total equal to either figure and flags anything else.
+- Tests must prove that `sum(rounded line VAT)` can differ from `round(net total × 0.2)` and that both are accepted. Reports (phase 6) must add up to the invoices' printed totals: when an invoice rounded on the total, the penny difference is allocated to its lines. (This exact few-pence discrepancy breaks real monthly cost reports.)
 
 ### 4.4 Cost allocation
 
@@ -151,18 +151,30 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 
 ### 4.5 Notes from Florin for phase 5 (confirmed)
 
-- **"Our ref" is our own order number**, the spreadsheet's "order number" column, printed on the supplier's invoices. It is the key from an invoice to a hire order. `HireOrder.orderRef` holds it, and line linking uses it before the supplier's job number.
+- **Our own order number** (the spreadsheet's "order number" column) is the key from an invoice to a hire order when the supplier prints it. `HireOrder.orderRef` holds it, and line linking uses it before the supplier's job number. _Correction after reading the real invoices in 5b:_ the contract-layout supplier prints it as "Order No"; on the despatch-layout supplier's invoices "Our Ref" is the supplier's own job number (the same number as "Job No." on its statements), so those invoices link by job number.
 - **E-codes are fleet codes**: the code of the physical item, the same code the spreadsheet holds. An E-code can change from one monthly continuation invoice to the next, when the item is swapped or the product changes. The app records each change of code on an item (old code, new code, date), keeps linking invoice lines with the old code to the item, and R15 reports a code gone plus a code new on the same order as one possible swap to confirm, not as two unrelated findings.
 - **Acceptance test with real documents.** The final test of phase 5 runs the invoices of the previous months through the app, and every supplier statement must match them (R11): every statement line found, every amount equal, nothing held that is not on a statement. The real documents stay in `private/` and the local database; fictional demo data can replace them later for demos.
 
-**Phase 5 is split in three parts:** 5a our order number, site recognition (aliases, delivery address) and fleet code changes; 5b PDF upload, extraction (mock in tests, an AI API for real use) and the review screen; 5c statement import and R11, then the acceptance test with real documents.
+**Phase 5 is split in three parts:** 5a our order number, site recognition (aliases, delivery address) and fleet code changes; 5b PDF upload, reading the invoice from the PDF and the review screen; 5c statement import and R11, then the acceptance test with real documents.
 
 **Implemented in Phase 5a:**
 
 - `HireOrder.orderRef` (unique) and `Invoice.orderRef`. `linkInvoiceLine` finds the header's order by our order number, then by job number; a line's fleet code matches an item's current or earlier codes. `UNKNOWN_ORDER_REF` joins the link problems, and R8 reports it once per invoice.
 - `FleetCodeChange` keeps an item's earlier codes. Recording a change re-links the supplier's unlinked lines and re-checks the order's invoices. R15 compares items, not raw codes, so a recorded change is the same item; one code gone plus one new code on the job is reported as a single possible swap.
-- `SiteAlias` stores how suppliers spell a site, normalised (upper case, letters and digits). `recognizeSite` tries, in order: a recorded alias, the exact name, the code as a word, every word of the reference in the name, the delivery postcode; when a rule fits two sites it returns them as candidates and picks none. `Invoice.siteId` comes from the first linked order (`siteMatchedBy = ORDER`), otherwise from recognition.
+- `SiteAlias` stores how suppliers spell a site, normalised (upper case, letters and digits). `recognizeSite` tries, in order: a recorded alias, the exact name, the code as a word, every word of the reference in the name, a recorded alias or the site name in a line of the delivery address (added in 5b: some invoices carry a PO number as the reference), the delivery postcode; when a rule fits two sites it returns them as candidates and picks none. `Invoice.siteId` comes from the first linked order (`siteMatchedBy = ORDER`), otherwise from recognition.
 - Unlinked lines are linked again when an order, an item, an order number or a fleet code is added or changed: an invoice can be entered before its order.
+
+**Implemented in Phase 5b:**
+
+- **Templates, not AI.** There are two equipment suppliers and both send PDFs with text, so each layout has a template (`src/lib/extraction`): deterministic, tested without mocks, no API key, no cost. Decided with Florin. A third supplier gets a template, or an AI reader as a fallback behind the same `extractInvoice` result.
+- **Reading a PDF.** `readPdfText` (unpdf, the PDF.js engine) returns text pieces with their position. `groupIntoLines` rebuilds rows (pieces within 3 points of height) and columns (a gap of 3 points or more starts a cell). Templates read values by label and column. Real column gaps are as small as 4 points, which set the threshold.
+- **Despatch layout:** "Our Ref" = job number, "Your Ref" = customer reference, "Account" = our account number (finds the supplier), items "N x description", the period, "W wks D days", rate per week, total and VAT code, the fleet code on the "Ecode:" row below. A row with only an amount under an item is a sub-line of that item: the suspension credit ("Free days ... 121.28-") becomes a negative hire line with the item's fleet code, which is what R16 looks for. "Workshop" invoices (damage charges) are SALE invoices with OTHER lines, VAT code O at 0%.
+- **Contract layout:** "Order No" = our order number, "Contract No." = job number, the account code at the start of that row, the site block as the delivery address. One block per item; the fleet code is in brackets in the description and the charge reads "£72.00 per week for 4 weeks 3 days"; "previous invoice no." gives the last invoice. All items off hired makes it a return invoice.
+- **Credit notes** (both layouts) are stored with negative amounts, the period as printed.
+- **Nothing guessed, nothing saved unseen.** Missing fields are left empty with a warning; lines that do not add up to the net, or VAT more than half a penny per line away from the VAT printed, are reported. The form opens filled in and is saved only when the person saves it. The PDF is kept with the invoice (`Invoice.filePath`, under `INVOICE_FILES_DIR`).
+- **Checked on the real documents, locally:** 269 distinct invoices (261 despatch, 8 contract) read with no warnings. Three things found on real data were fixed test-first with fictional reproductions: VAT rounded on the total (R10), suspension credit rows, and a site block broken by our own address printed at other heights.
+- **Tried in the app with real invoices, locally:** four real invoices (REDACTED continuation with a suspension credit, REDACTED return, Star invoice, Star credit note) uploaded through the screen, read with no warnings, supplier found by account number, saved with the PDF. This found two more things, fixed test-first: R8 no longer flags a credit line (it costs nothing), and the site is also recognised from a spelling or name in the delivery address.
+- **Trades:** DUCT added (MECH, ELEC, VENT, DUCT, BMS), as on the cost allocation sheet.
 
 ## 5. Suggested data model
 
@@ -262,7 +274,7 @@ Each phase ends with: a demo, CI green, a merged PR, interview notes for Florin.
 2. **Sites, orders, items API + UI.** Off-hire and collection. API test suite. First Page Objects.
 3. **Invoices and lines.** Manual entry, linking by order number / fleet code, duplicate invoice protection. API + E2E.
 4. **Reconciliation engine + discrepancy report.** Checks R1-R8, R10, R12-R17, findings UI, on-hire register, due-date and payment view. This is the core value; the regression suite and the published test report land here.
-5. **Upload + AI extraction.** PDF upload, `MockExtractor` for tests, `AiExtractor` behind a flag, review screen, contract tests with recorded responses (no live calls in CI). Statement import (CSV/XLSX) and R11.
+5. **Upload + reading invoices.** PDF upload, one template per supplier layout (an AI reader only as a later fallback, never called in CI), review screen. Statement import and R11.
 6. **Reports.** Monthly allocation site × trade, yearly totals, CSV/Excel export.
 7. **Service events + extras.** R9, query email draft, long-hire and cost alerts.
 8. **Optional.** Java RestAssured module, Postgres in CI, roles, Monday.com sync.

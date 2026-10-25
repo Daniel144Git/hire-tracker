@@ -7,7 +7,7 @@ export interface SiteForRecognition {
   aliases: string[];
 }
 
-export type SiteMatch = "ALIAS" | "NAME" | "CODE" | "POSTCODE";
+export type SiteMatch = "ALIAS" | "NAME" | "CODE" | "ADDRESS" | "POSTCODE";
 
 export interface SiteRecognition {
   siteId: string | null;
@@ -35,8 +35,10 @@ function postcodeOf(address: string | null | undefined): string | null {
  * Which site an invoice is for, from the customer reference as the supplier typed it
  * (inconsistently: "RIVERSIDE", "Riverside Twr", "riverside") and the delivery address.
  * In order: a recorded alias, the site name, the site code as a word, every word of the
- * reference in the name, the postcode of the delivery address. It never guesses: when a rule
- * fits more than one site, the sites are returned as candidates and no site is chosen.
+ * reference in the name, then a recorded alias or the site name in a line of the delivery
+ * address (the reference is sometimes a PO number), then the postcode of the delivery address.
+ * It never guesses: when a rule fits more than one site, the sites are returned as candidates
+ * and no site is chosen.
  */
 export function recognizeSite(
   printed: { customerRef?: string | null; deliveryAddress?: string | null },
@@ -45,6 +47,12 @@ export function recognizeSite(
   const ref = normaliseReference(printed.customerRef ?? "");
   const words = ref.split(" ").filter(Boolean);
   const postcode = postcodeOf(printed.deliveryAddress);
+  // Each address line, padded so a phrase only matches whole words: " REDACTED 2 6 REDACTED WAY ".
+  const addressLines = (printed.deliveryAddress ?? "")
+    .split(",")
+    .map((line) => ` ${normaliseReference(line)} `);
+  const inAddress = (phrase: string) =>
+    phrase !== "" && addressLines.some((line) => line.includes(` ${phrase} `));
 
   const rules: [SiteMatch, (site: SiteForRecognition) => boolean][] = [
     ["ALIAS", (site) => ref !== "" && site.aliases.includes(ref)],
@@ -57,6 +65,7 @@ export function recognizeSite(
         return words.length > 0 && words.every((word) => nameWords.includes(word));
       },
     ],
+    ["ADDRESS", (site) => [...site.aliases, normaliseReference(site.name)].some(inAddress)],
     ["POSTCODE", (site) => postcode !== null && postcodeOf(site.deliveryAddress) === postcode],
   ];
 

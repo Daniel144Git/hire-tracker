@@ -166,7 +166,7 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
           <th scope="col">Status</th>
           <th scope="col">Off-hire</th>
           <th scope="col">Collection no</th>
-          <th scope="col">Our ref</th>
+          <th scope="col">Our order no</th>
           <th scope="col">Action</th>
         </tr>
       </thead>

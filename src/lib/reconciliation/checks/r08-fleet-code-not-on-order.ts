@@ -2,7 +2,7 @@ import { finding, jobOrderOf, orderOf } from "../helpers";
 import type { Check, Finding } from "../types";
 
 /**
- * R8: a fleet code billed that is on no hire order (are we paying for something not on site?),
+ * R8: a fleet code charged that is on no hire order (are we paying for something not on site?),
  * on more than one, or on an order of another site than the invoice's job. Also a job number
  * that matches no order.
  */
@@ -12,6 +12,8 @@ export const fleetCodeNotOnOrder: Check = (context) => {
   const jobOrder = jobOrderOf(context);
 
   for (const line of invoice.lines) {
+    // A credit (e.g. a suspension credit) with an unknown fleet code costs nothing: not flagged.
+    if (line.linkProblem === "UNKNOWN_FLEET_CODE" && line.net <= 0) continue;
     if (line.linkProblem === "UNKNOWN_FLEET_CODE") {
       findings.push(
         finding(

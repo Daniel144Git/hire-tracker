@@ -1,7 +1,7 @@
 import { itemData, julyLine, uniqueCode } from "../support/test-data";
 import { expect, test } from "./fixtures";
 
-test.describe("Our order number ('Our ref')", () => {
+test.describe("Our order number", () => {
   test("links an invoice to the order by our order number", { tag: "@smoke" }, async ({ api }) => {
     const order = await api.createOrder();
 

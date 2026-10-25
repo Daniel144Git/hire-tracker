@@ -97,3 +97,16 @@ What I can explain about this project, phase by phase.
 - **Order of events does not matter.** An invoice can arrive before its order; entering the order, an item or a new code re-links the waiting lines and re-runs the checks. An API test proves it.
 - **Real data stays local.** The app is designed around the real documents, which live in a git-ignored folder and the local database; everything committed is fictional, because git history keeps a file even after it is replaced.
 - **Test helpers deserve care too.** I replaced a test that faked an order with a type cast by a proper `createInvoiceForSupplier` helper.
+
+## Phase 5b: reading invoice PDFs
+
+- **The simplest tool that does the job.** The brief planned AI extraction. Looking at the real documents first showed two suppliers, both sending PDFs with text. A template per layout is exact, free, fast and testable without mocks, so I proposed it, Florin agreed, and AI stays a fallback for a future third supplier.
+- **Test data that behaves like the real thing.** The fixtures are fictional documents written as text in each layout. A helper turns them into text fragments for fast unit tests and into real PDFs (pdf-lib) for round-trip tests through the same PDF reader the app uses. Neither contains real data.
+- **Validated on production data without committing it.** A local-only test in the git-ignored folder ran every real invoice through the reader: 269 invoices. It found three real problems, and each got a fictional failing test before the fix: VAT rounded once on the total, suspension credits printed under an item, and a site address broken by text at other heights.
+- **Questioning the spec with evidence.** The brief said VAT is rounded per line. The real invoices round once on the total, which is also allowed. I changed R10 to accept both and flag anything else, updated the existing test that encoded the old rule, and wrote the reason in the brief.
+- **Thresholds from measurements.** Cells are split by the gap between text pieces. I measured the gaps on the real PDFs (columns as close as 4 points) before choosing 3 points, and made the test PDFs use realistic type sizes instead of bending the rule to the fixtures.
+- **A human checks before anything is saved.** Reading fills the form and lists warnings; only "Save invoice" records it. Fields that cannot be read are left empty, never guessed.
+- **File uploads done safely.** Size limit, PDF signature check, server-generated ids as file names (no path from the client), a path-traversal guard when reading back, `nosniff` on the download, and the files folder outside git. The test reset only empties a folder named `test-*`.
+- **Mutation checks.** Breaking the credit-note sign fails 2 unit tests; breaking the column threshold fails 14.
+- **Strict locators catch accessibility bugs.** The upload form and its file input had the same accessible name; Playwright's strict mode failed on the ambiguity, and the fix made the page clearer for screen readers too.
+- **Exploratory testing finds what unit tests cannot.** Uploading four real invoices through the screen showed two problems no test had asked about: an R8 finding on a credit line, and a site named only in the delivery address. Each became a failing unit test, then a fix.

@@ -7,8 +7,11 @@ export class InvoicePage {
   readonly findingsTable: Locator;
   /** One sentence above the findings: "1 open finding, 1 high. Overcharged: £130.00." */
   readonly findingsSummary: Locator;
+  /** Shown when the invoice's PDF was kept. */
+  readonly pdfLink: Locator;
 
   constructor(private readonly page: Page) {
+    this.pdfLink = page.getByRole("link", { name: "Open the invoice PDF" });
     this.heading = page.getByRole("heading", { level: 1 });
     this.linesTable = page.getByRole("table", { name: "Invoice lines" });
     this.findingsTable = page.getByRole("table", { name: "Findings" });

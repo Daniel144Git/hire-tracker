@@ -46,6 +46,7 @@ export default defineConfig({
     env: {
       DATABASE_URL: "file:./prisma/test.db",
       NEXT_DIST_DIR: ".next-test",
+      INVOICE_FILES_DIR: "storage/test-invoice-files",
     },
   },
 });

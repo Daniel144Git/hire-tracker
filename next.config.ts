@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {
+    // Invoice PDFs are sent to a Server Action: up to 10 MB, plus the form's own overhead.
+    serverActions: { bodySizeLimit: "11mb" },
     // Next.js 16.4 Turbopack regression: with the persistent dev cache, a page opened after an API
     // route was compiled reloads in an endless loop (issue #7, vercel/next.js#100251).
     // Remove once a Next.js release includes the fix.
