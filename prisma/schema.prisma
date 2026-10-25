@@ -217,6 +217,8 @@ model Finding {
   /// True when the discrepancy is already settled, e.g. credited by a credit note.
   resolved        Boolean      @default(false)
   resolution      String?
+  /// Position in the engine's order: most severe first, then by line.
+  rank            Int          @default(0)
   createdAt       DateTime     @default(now())
 
   @@index([invoiceId])
