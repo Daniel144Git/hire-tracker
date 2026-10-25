@@ -21,7 +21,7 @@ npm run dev
 
 Then open http://localhost:3000/sites, or http://localhost:3000/invoices to enter an invoice. The seed adds fictional demo data: the supplier Apex Plant Hire, three sites and two hire orders on RVS - Riverside Tower.
 
-The API and E2E tests start their own server on port 3100 with a separate database (`prisma/test.db`), recreated empty for every run, so they never touch your demo data.
+The API and E2E tests build the app and start their own production server on port 3100, with a separate database (`prisma/test.db`) recreated empty for every run, so they never touch your demo data and never depend on dev hot reload.
 
 | Command                | What it does                                                     |
 | ---------------------- | ---------------------------------------------------------------- |
@@ -56,7 +56,7 @@ All endpoints take and return JSON. Money is in pounds, dates are `YYYY-MM-DD`. 
 
 ## Reconciliation checks
 
-Every invoice is checked as soon as it is saved, and again when something it depends on changes: an off-hire date entered on one of its orders, or a credit note for the same orders. Each check is a pure function in `src/lib/reconciliation/checks`, with its own unit test file.
+Every invoice is checked as soon as it is saved, and again when something it depends on changes: an off-hire date entered on one of its orders, a credit note or a later invoice of the same orders or job, or a suspension recorded on the site. Each check is a pure function in `src/lib/reconciliation/checks`, with its own unit test file.
 
 | Check | What it finds                                                                                                                                | Severity                     |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
@@ -67,18 +67,26 @@ Every invoice is checked as soon as it is saved, and again when something it dep
 | R7    | A continuation invoice after the order's return invoice                                                                                      | Medium                       |
 | R10   | Line VAT that is not 20% rounded to the penny, or header totals that are not the sum of the lines                                            | Medium                       |
 | R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing | Medium (Low if missing)      |
+| R4    | An order on hire for a month with no invoice covering it (monthly report)                                                                    | Report                       |
+| R6    | A weekly rate that changed since the item's previous billing                                                                                 | Medium                       |
+| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order                                    | High / Medium                |
+| R12   | The same item type hired at different weekly rates on different orders                                                                       | Low                          |
+| R14   | A "last invoice" that is not the previous invoice held for the job                                                                           | Medium                       |
+| R15   | A fleet code billed last month that is gone with no return invoice, or new on the job: confirm on site                                       | Medium / Low                 |
+| R16   | A missing or wrong suspension credit on a site with a recorded suspension                                                                    | High / Medium                |
+| R17   | A collection or delivery charged more than once for the same order                                                                           | Medium                       |
 
-The remaining checks of the brief (R4, R6, R8, R12, R14, R15, R16, R17) and the monthly discrepancy report follow in the next part of phase 4.
+The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists every finding on the month's invoices, the amount overcharged on open findings, and the orders on hire with no invoice (R4). R9 (service events) and R11 (supplier statements) come in later phases.
 
 ## Continuous integration
 
 GitHub Actions runs on every pull request and on every push to `main` (`.github/workflows/ci.yml`):
 
 - **Lint, typecheck and unit tests**: ESLint, Prettier check, TypeScript, Vitest.
-- **API and E2E tests**: builds the production app, then runs the Playwright API and E2E tests against it. The HTML reports are uploaded as the `playwright-report` artifact of each run.
+- **API and E2E tests**: Playwright builds the production app, starts it, then runs the API and E2E tests against it. The HTML reports are uploaded as the `playwright-report` artifact of each run.
 
 ## Configuration
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
 
-Status: Phase 4 in progress (reconciliation engine: checks R1, R2, R3, R5, R7, R10 and R13). Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.
+Status: Phase 4 in progress: the reconciliation checks and the monthly discrepancy report are in; the on-hire register and the due-date and payment view are next. Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.
