@@ -139,3 +139,9 @@ What I can explain about this project, phase by phase.
 - **No side effects the user did not ask for.** The app drafts emails but never sends them: the person edits the text and opens it in their own email app.
 - **Reuse over rebuild.** Alerts are a pure function over the on-hire register that already existed, so the cost and days on hire come from code that is already tested.
 - **Client and server code in Next.js.** A label table exported from a client component would reach the server page as a reference, not an object; it moved to a shared module both can import.
+
+## Importing the real orders (local only)
+
+- **Real data finds what fictional data does not.** Importing the 62 real hire orders behind the invoices (from the spreadsheet and the invoices, through the app's API) found two bugs no test had covered: an item hired again on a new job stayed linked to its old job when the new order was entered after the invoice, and R17 counted a supplier's transport supplement, and separate trips on other days, as transport charged twice (80 false findings).
+- **Each bug became a failing test first,** reproduced with fictional data, then the fix: relinking now recomputes every line (linking is a pure function, so this is cheap and order-independent), and transport lines keep the day of the trip so R17 compares the same trip. False R1, R7 and R8 findings disappeared and R17 went from 80 findings to 1, which is a real question for the supplier.
+- **Backups before bulk changes.** The local database was copied before the import, so it could be restored.
