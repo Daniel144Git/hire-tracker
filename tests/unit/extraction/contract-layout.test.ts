@@ -64,6 +64,17 @@ describe("contract layout", () => {
     });
   });
 
+  it("reads the whole site block when the address beside it is printed at other heights", () => {
+    // Our address on the left sits a few points lower than the site rows on the right, so it
+    // forms rows of its own between them. Those rows must not end the site block.
+    const fragments = fragmentsOf(contractInvoice()).map((fragment) =>
+      fragment.x < 100 && fragment.y >= 750 && fragment.y <= 760
+        ? { ...fragment, y: fragment.y - 4 }
+        : fragment,
+    );
+    expect(extractInvoice(fragments)?.invoice.deliveryAddress).toBe(siteBlock);
+  });
+
   it("calls the invoice a return when every item on it was off hired", () => {
     const allOffHired = contractInvoice().replace(
       "week for 4 weeks 3 days  (hire continues...)",
