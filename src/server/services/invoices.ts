@@ -147,7 +147,12 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
 
   const orders = await db.hireOrder.findMany({
     where: { supplierId: supplier.id },
-    select: { id: true, supplierJobNo: true, items: { select: { id: true, fleetCode: true } } },
+    select: {
+      id: true,
+      supplierJobNo: true,
+      orderRef: true,
+      items: { select: { id: true, fleetCode: true } },
+    },
   });
 
   const invoice = await db.invoice.create({
@@ -160,7 +165,11 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
       grossPence: toPence(gross),
       lines: {
         create: lines.map((line, index) => {
-          const link = linkInvoiceLine(line, input.jobNo, orders);
+          const link = linkInvoiceLine(
+            line,
+            { orderRef: input.orderRef, jobNo: input.jobNo },
+            orders,
+          );
           return {
             ...toLineData(line),
             position: index + 1,

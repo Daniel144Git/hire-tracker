@@ -4,7 +4,15 @@ export type LinkProblem =
 export interface OrderForLinking {
   id: string;
   supplierJobNo: string;
+  /** Our own order number ("Our ref" on the invoice). */
+  orderRef: string | null;
   items: { id: string; fleetCode: string | null }[];
+}
+
+/** What the invoice header says about the order. */
+export interface InvoiceHeaderRefs {
+  orderRef?: string | null;
+  jobNo?: string | null;
 }
 
 export interface LineLink {
@@ -23,9 +31,10 @@ export interface LineLink {
  */
 export function linkInvoiceLine(
   line: { fleetCode?: string | null },
-  invoiceJobNo: string | null | undefined,
+  header: InvoiceHeaderRefs,
   orders: OrderForLinking[],
 ): LineLink {
+  const invoiceJobNo = header.jobNo;
   const jobOrder = invoiceJobNo
     ? orders.find((order) => order.supplierJobNo === invoiceJobNo)
     : undefined;
