@@ -2,6 +2,9 @@ import AxeBuilder from "@axe-core/playwright";
 import { test as base } from "@playwright/test";
 import { ApiClient } from "../support/api-client";
 import { HomePage } from "./pages/home.page";
+import { InvoiceFormPage } from "./pages/invoice-form.page";
+import { InvoicePage } from "./pages/invoice.page";
+import { InvoicesPage } from "./pages/invoices.page";
 import { SitePage } from "./pages/site.page";
 import { SitesPage } from "./pages/sites.page";
 
@@ -9,6 +12,9 @@ type Fixtures = {
   homePage: HomePage;
   sitesPage: SitesPage;
   sitePage: SitePage;
+  invoicesPage: InvoicesPage;
+  invoiceFormPage: InvoiceFormPage;
+  invoicePage: InvoicePage;
   /** Creates test data through the API, so UI tests only drive the screen they are about. */
   api: ApiClient;
   /** Runs an axe accessibility scan of the current page (WCAG 2.1 A and AA rules). */
@@ -28,6 +34,15 @@ export const test = base.extend<Fixtures>({
   },
   sitePage: async ({ page }, use) => {
     await use(new SitePage(page));
+  },
+  invoicesPage: async ({ page }, use) => {
+    await use(new InvoicesPage(page));
+  },
+  invoiceFormPage: async ({ page }, use) => {
+    await use(new InvoiceFormPage(page));
+  },
+  invoicePage: async ({ page }, use) => {
+    await use(new InvoicePage(page));
   },
   api: async ({ request }, use) => {
     await use(new ApiClient(request));

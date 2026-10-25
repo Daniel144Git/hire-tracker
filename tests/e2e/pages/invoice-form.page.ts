@@ -1,0 +1,92 @@
+import type { Locator, Page } from "@playwright/test";
+
+export interface InvoiceLineEntry {
+  description: string;
+  chargeType: "Hire" | "Damage waiver" | "Transport" | "Sale" | "Other";
+  fleetCode?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  weeks?: number;
+  days?: number;
+  rate?: number;
+  net: number;
+  vat: number;
+}
+
+export interface InvoiceEntry {
+  supplierName: string;
+  number: string;
+  type: "Continuation" | "Return" | "Sale";
+  date: string;
+  jobNo?: string;
+  net: number;
+  vat: number;
+  gross: number;
+  lines: InvoiceLineEntry[];
+}
+
+/** Page Object for "/invoices/new": the header and any number of lines. */
+export class InvoiceFormPage {
+  readonly heading: Locator;
+  readonly form: Locator;
+  readonly numberInput: Locator;
+  readonly addLineButton: Locator;
+  readonly saveButton: Locator;
+  readonly errorMessage: Locator;
+
+  constructor(private readonly page: Page) {
+    this.heading = page.getByRole("heading", { level: 1, name: "Enter an invoice" });
+    this.form = page.getByRole("form", { name: "Invoice" });
+    this.numberInput = this.form.getByLabel("Invoice number", { exact: true });
+    this.addLineButton = this.form.getByRole("button", { name: "Add line" });
+    this.saveButton = this.form.getByRole("button", { name: "Save invoice" });
+    this.errorMessage = page.getByRole("alert");
+  }
+
+  async goto(): Promise<void> {
+    await this.page.goto("/invoices/new");
+  }
+
+  /** The fieldset of one line, e.g. line(1) is "Line 1". */
+  line(number: number): Locator {
+    return this.form.getByRole("group", { name: `Line ${number}`, exact: true });
+  }
+
+  async fillHeader(invoice: Omit<InvoiceEntry, "lines">): Promise<void> {
+    const form = this.form;
+    await form
+      .getByLabel("Supplier", { exact: true })
+      .selectOption({ label: invoice.supplierName });
+    await this.numberInput.fill(invoice.number);
+    await form.getByLabel("Type", { exact: true }).selectOption({ label: invoice.type });
+    await form.getByLabel("Invoice date").fill(invoice.date);
+    if (invoice.jobNo) await form.getByLabel("Job number").fill(invoice.jobNo);
+    await form.getByLabel("Net total (£)").fill(String(invoice.net));
+    await form.getByLabel("VAT total (£)").fill(String(invoice.vat));
+    await form.getByLabel("Gross total (£)").fill(String(invoice.gross));
+  }
+
+  async fillLine(number: number, line: InvoiceLineEntry): Promise<void> {
+    const group = this.line(number);
+    await group.getByLabel("Description").fill(line.description);
+    await group.getByLabel("Charge type").selectOption({ label: line.chargeType });
+    if (line.fleetCode) await group.getByLabel("Fleet code").fill(line.fleetCode);
+    if (line.periodFrom) await group.getByLabel("Period from").fill(line.periodFrom);
+    if (line.periodTo) await group.getByLabel("Period to").fill(line.periodTo);
+    if (line.weeks !== undefined) await group.getByLabel("Weeks").fill(String(line.weeks));
+    if (line.days !== undefined) await group.getByLabel("Days").fill(String(line.days));
+    if (line.rate !== undefined) await group.getByLabel("Rate (£/week)").fill(String(line.rate));
+    await group.getByLabel("Net (£)").fill(String(line.net));
+    await group.getByLabel("VAT (£)").fill(String(line.vat));
+  }
+
+  /** Fills the whole invoice, adding a line form for every line after the first, and saves. */
+  async enterInvoice(invoice: InvoiceEntry): Promise<void> {
+    await this.fillHeader(invoice);
+    for (const [index, line] of invoice.lines.entries()) {
+      if (index > 0) await this.addLineButton.click();
+      await this.fillLine(index + 1, line);
+    }
+    await this.saveButton.click();
+  }
+}

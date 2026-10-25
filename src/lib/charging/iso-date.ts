@@ -34,3 +34,21 @@ export function parseIsoDate(value: IsoDate): number {
 export function dayOfWeek(time: number): number {
   return new Date(time).getUTCDay();
 }
+
+/** A day number (UTC midnight) back to "YYYY-MM-DD". */
+export function formatIsoDate(time: number): IsoDate {
+  return new Date(time).toISOString().slice(0, 10);
+}
+
+/** "YYYY-MM-DD" plus a number of calendar days. */
+export function addDays(date: IsoDate, days: number): IsoDate {
+  return formatIsoDate(parseIsoDate(date) + days * MS_PER_DAY);
+}
+
+/** The last calendar day of the month after `date`, e.g. 2026-08-31 -> 2026-09-30. */
+export function endOfNextMonth(date: IsoDate): IsoDate {
+  const day = new Date(parseIsoDate(date));
+  // Day 0 of a month is the last day of the month before it, so "month + 2, day 0" is
+  // the last day of next month. Date.UTC also rolls December over into the next year.
+  return formatIsoDate(Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 2, 0));
+}

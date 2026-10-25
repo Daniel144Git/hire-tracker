@@ -15,21 +15,23 @@ export const isoDateSchema = z.string().refine(
   { message: "Must be a real date in YYYY-MM-DD format" },
 );
 
+/** An amount in pounds with at most two decimal places; negative on credit notes. */
+export const moneySchema = z.number().refine(
+  (value) => {
+    try {
+      toPence(value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Must have at most 2 decimal places" },
+);
+
 /** An amount in pounds, zero or more, with at most two decimal places. */
-export const poundsSchema = z
-  .number()
-  .min(0)
-  .refine(
-    (value) => {
-      try {
-        toPence(value);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: "Must have at most 2 decimal places" },
-  );
+export const poundsSchema = moneySchema.refine((value) => value >= 0, {
+  message: "Must be zero or more",
+});
 
 /** A short identifier such as a code or a number: trimmed and upper-cased. */
 export function identifierSchema(maxLength: number) {

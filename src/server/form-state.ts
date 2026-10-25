@@ -10,6 +10,7 @@ const FIELD_BY_CODE: Record<string, string> = {
   DUPLICATE_SITE_CODE: "code",
   DUPLICATE_JOB_NO: "supplierJobNo",
   DUPLICATE_SUPPLIER: "name",
+  DUPLICATE_INVOICE: "number",
   OFF_HIRE_BEFORE_START: "offHireDate",
 };
 
@@ -65,6 +66,17 @@ export function readForm(formData: FormData, names: string[]): Record<string, st
   for (const name of names) {
     const value = formData.get(name);
     if (typeof value === "string" && value.trim() !== "") values[name] = value;
+  }
+  return values;
+}
+
+/** Every non-empty text field of a form, by name, e.g. { "number": "INV-1", "lines.0.net": "210" }. */
+export function readAllFields(formData: FormData): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const [name, value] of formData.entries()) {
+    if (typeof value === "string" && value.trim() !== "" && !name.startsWith("$ACTION")) {
+      values[name] = value;
+    }
   }
   return values;
 }

@@ -19,7 +19,7 @@ npm run db:seed
 npm run dev
 ```
 
-Then open http://localhost:3000/sites. The seed adds fictional demo data: the supplier Apex Plant Hire, three sites and two hire orders on RVS - Riverside Tower.
+Then open http://localhost:3000/sites, or http://localhost:3000/invoices to enter an invoice. The seed adds fictional demo data: the supplier Apex Plant Hire, three sites and two hire orders on RVS - Riverside Tower.
 
 The API and E2E tests start their own server on port 3100 with a separate database (`prisma/test.db`), recreated empty for every run, so they never touch your demo data.
 
@@ -65,4 +65,4 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
 
-Status: Phase 2 (sites, hire orders and items). Phase 1 added the charge calculator in `src/lib/charging`, built test-first. All data in this repository is fictional.
+Status: Phase 3 (invoices and invoice lines). Earlier phases added the charge calculator (`src/lib/charging`, built test-first) and sites, hire orders and items. All data in this repository is fictional.
