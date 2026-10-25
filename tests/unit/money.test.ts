@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { round2 } from "@/lib/money";
+import { fromPence, round2, toPence } from "@/lib/money";
 
 describe("round2: rounds money to the penny", () => {
   it("leaves an amount that already has two decimals unchanged", () => {
@@ -26,5 +26,27 @@ describe("round2: rounds money to the penny", () => {
 
   it("returns 0, not -0, when a tiny credit rounds to nothing", () => {
     expect(Object.is(round2(-0.001), 0)).toBe(true);
+  });
+});
+
+describe("toPence and fromPence: money is stored as whole pence", () => {
+  it.each([
+    [50, 5000],
+    [41.29, 4129],
+    [3.75, 375],
+    [0.1, 10],
+    [0, 0],
+  ])("£%s is %i pence", (pounds, pence) => {
+    expect(toPence(pounds)).toBe(pence);
+    expect(fromPence(pence)).toBe(pounds);
+  });
+
+  it("ignores floating-point noise: £19.99 is 1999 pence, not 1998", () => {
+    // 19.99 * 100 is 1998.9999999999998 in floating point; cutting off the decimals gives 1998.
+    expect(toPence(19.99)).toBe(1999);
+  });
+
+  it("rejects an amount with fractions of a penny", () => {
+    expect(() => toPence(1.005)).toThrow(RangeError);
   });
 });
