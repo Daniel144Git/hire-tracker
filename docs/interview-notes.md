@@ -55,3 +55,14 @@ What I can explain about this project, phase by phase.
 - **Strict locators catch ambiguity.** "Invoice number" also matched "Last invoice number"; Playwright's strict mode failed the test instead of filling the wrong field, and `exact: true` fixed it.
 - **Choosing the locator honestly.** Where an element has no role and name to find it by (a value in a definition list), I used a `data-testid` rather than an XPath chain, and documented why in the Page Object.
 - **Looking at the screen.** A headless screenshot showed "4 wks 1 days", which no test asserted; fixed to match the invoices' "4 wks 1 day".
+
+## Phase 4a: reconciliation engine and the first checks
+
+- **An engine of pure functions.** Each check takes a plain context (the invoice, its orders, related invoices, the supplier's rules) and returns findings. No database in the checks, so 52 unit tests run in milliseconds and every edge case is cheap to test.
+- **One file and one test file per check**, as the brief asks, plus shared test data builders: each test overrides only what it is about, so it reads like the requirement.
+- **Findings that explain themselves.** Each finding has a check, a severity, the line, a message a buyer can send to the supplier, and billed / expected / difference in pounds.
+- **Business behaviour, not just arithmetic.** R1 closes itself when the supplier's credit note arrives; R5 steps aside when R1 or R2 already report the line, so one mistake is reported once; R3 flags only the second billing; R10 proves the brief's rounding rule with the exact three-line example where the VAT total differs from 20% of the net total.
+- **Checks re-run when their inputs change.** Saving an invoice, entering an off-hire date or receiving a credit note re-checks the affected invoices; API tests prove each trigger.
+- **I found a bug in my own check with a test.** R5 skipped every first-month line billed from the 1st when the order started on the Monday after. I wrote the failing test first, then fixed it.
+- **I found a bug the suite could not see.** `npm run dev` reloaded pages in an endless loop because of an explicit `distDir`, but the test server used a different folder, so every test was green. I logged it as GitHub issue #5 with steps, expected and actual, fixed it, and added a regression test that fails on the old config. Lesson: test environments that differ from what users run can hide bugs; a manual look at the real app still matters.
+- **The critical E2E flow from the brief.** Off-hire an item on the site page, enter the next invoice by hand, and see the R1 finding with the overcharge.

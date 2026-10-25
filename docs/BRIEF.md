@@ -179,6 +179,17 @@ This may be refined; changes go in this file.
 - The due date is taken from the invoice when printed, otherwise calculated from the supplier's payment terms.
 - `Invoice.jobNo` holds the job number printed in the header. Each line is linked when it is saved: a line with a fleet code to the item with that code (first within the header's job, otherwise the only item with that code), a line without one (damage waiver, transport) to the job's order. A line that cannot be linked keeps `linkProblem`: `UNKNOWN_FLEET_CODE`, `AMBIGUOUS_FLEET_CODE` or `UNKNOWN_JOB_NO`. These feed R8 and R15 in phase 4.
 
+**Implemented in Phase 4a (`src/lib/reconciliation`):** the engine and checks R1, R2, R3, R5, R7, R10 and R13.
+
+- Each check is a pure function of a context: the invoice, the orders its lines are linked to, the other invoices of the same supplier on those orders, the supplier's charging rules, the tolerance and the VAT rate. The service builds the context from the database, runs every check and replaces the invoice's findings.
+- Checks run when an invoice is saved; the other invoices of the same orders are re-checked at the same time (a credit note can close an R1 finding). Entering an off-hire date re-checks the order's invoices. `POST /api/invoices/:id/check` runs them on demand.
+- R1 and R2 report the chargeable working days outside the hire and the overcharge (billed minus the expected charge for the days on hire). R1 is resolved when credit notes for the same item credit at least the overcharge, within the tolerance.
+- R5 steps aside when R1 or R2 report chargeable days outside the hire, so one mistake is reported once. An undercharge is reported as LOW.
+- R3 flags only the later of two invoices (by date, then number) and values the overlap at the daily rate (weekly rate / 5).
+- R10 accepts 0% VAT on `OTHER` lines (loss and damage charges are outside the scope of VAT). Totals are compared to the penny.
+- R13 treats a hire line not linked to an order as carrying damage waiver (the supplier's default).
+- Findings are recalculated on every run; resolving a finding by hand (query outcome) comes with the discrepancy report.
+
 ## 6. Tech stack
 
 - **TypeScript** everywhere.
