@@ -66,6 +66,16 @@ describe("R5: amount differs from the agreed rate", () => {
     expect(amountDiffersFromExpected(ctx)).toEqual([]);
   });
 
+  it("still checks a line whose period starts on the weekend before a Monday start", () => {
+    // Billed from Sat 1 Aug for an order delivered Mon 3 Aug: nothing chargeable is outside the
+    // hire, so R2 has nothing to say and R5 must check the amount.
+    const ctx = context({ orders: [order({ startDate: "2026-08-03" })], invoice: billed(218) });
+
+    expect(amountDiffersFromExpected(ctx)).toEqual([
+      expect.objectContaining({ check: "R5", expected: 210, difference: 8 }),
+    ]);
+  });
+
   it("skips lines it cannot price: no linked item, no period, or a credit", () => {
     for (const overrides of [{ hireItemId: null }, { periodFrom: null, periodTo: null }]) {
       expect(amountDiffersFromExpected(context({ invoice: billed(218, overrides) }))).toEqual([]);
