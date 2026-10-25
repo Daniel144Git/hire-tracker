@@ -32,4 +32,15 @@ Then open http://localhost:3000. The API and E2E tests start the app themselves 
 | `npm run test:e2e`     | Runs the end-to-end UI tests (Playwright, Chromium)              |
 | `npm run test:report`  | Opens the last Playwright HTML report                            |
 
+## Continuous integration
+
+GitHub Actions runs on every pull request and on every push to `main` (`.github/workflows/ci.yml`):
+
+- **Lint, typecheck and unit tests**: ESLint, Prettier check, TypeScript, Vitest.
+- **API and E2E tests**: builds the production app, then runs the Playwright API and E2E tests against it. The HTML reports are uploaded as the `playwright-report` artifact of each run.
+
+## Configuration
+
+Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed.
+
 Status: Phase 0 (setup). All data in this repository is fictional.
