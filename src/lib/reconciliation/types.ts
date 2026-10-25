@@ -39,7 +39,8 @@ export interface CheckLine {
   orderId: string | null;
   hireItemId: string | null;
   /** Why the line could not be linked when it was saved (Phase 3). */
-  linkProblem: "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE" | null;
+  linkProblem:
+    "UNKNOWN_ORDER_REF" | "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE" | null;
 }
 
 export interface CheckInvoice {

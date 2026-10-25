@@ -67,6 +67,7 @@ enum Severity {
 
 /// Why an invoice line could not be linked to a hire order or item.
 enum LinkProblem {
+  UNKNOWN_ORDER_REF
   UNKNOWN_JOB_NO
   UNKNOWN_FLEET_CODE
   AMBIGUOUS_FLEET_CODE
@@ -94,6 +95,8 @@ model Site {
   deliveryAddress String?
   orders          HireOrder[]
   suspensions     Suspension[]
+  aliases         SiteAlias[]
+  invoices        Invoice[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
@@ -101,6 +104,8 @@ model Site {
 model HireOrder {
   id                  String        @id @default(cuid())
   supplierJobNo       String
+  /// Our own order number ("Our ref" on the invoices): the key from an invoice to the order.
+  orderRef            String?       @unique
   supplier            Supplier      @relation(fields: [supplierId], references: [id])
   supplierId          String
   site                Site          @relation(fields: [siteId], references: [id])
@@ -123,18 +128,19 @@ model HireOrder {
 }
 
 model HireItem {
-  id              String        @id @default(cuid())
-  order           HireOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id              String            @id @default(cuid())
+  order           HireOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId         String
   description     String
   fleetCode       String?
-  qty             Int           @default(1)
+  qty             Int               @default(1)
   weeklyRatePence Int
   despatchNo      String?
   despatchDate    String?
-  isAccessory     Boolean       @default(false)
+  isAccessory     Boolean           @default(false)
   invoiceLines    InvoiceLine[]
-  createdAt       DateTime      @default(now())
+  codeChanges     FleetCodeChange[]
+  createdAt       DateTime          @default(now())
 
   @@index([fleetCode])
 }
@@ -142,29 +148,38 @@ model HireItem {
 /// An invoice as printed by the supplier. Amounts are stored exactly as billed, even when they
 /// are wrong: finding what is wrong is the job of the reconciliation checks, not of data entry.
 model Invoice {
-  id            String        @id @default(cuid())
-  supplier      Supplier      @relation(fields: [supplierId], references: [id])
-  supplierId    String
-  number        String
-  date          String
-  dueDate       String
-  type          InvoiceType
-  isCreditNote  Boolean       @default(false)
+  id              String        @id @default(cuid())
+  supplier        Supplier      @relation(fields: [supplierId], references: [id])
+  supplierId      String
+  number          String
+  date            String
+  dueDate         String
+  type            InvoiceType
+  isCreditNote    Boolean       @default(false)
   /// The supplier's job / contract number printed in the header: one hire order.
-  jobNo         String?
+  jobNo           String?
+  /// "Our ref" printed in the header: our own order number.
+  orderRef        String?
+  /// Delivery address printed on the invoice: a second signal to recognise the site.
+  deliveryAddress String?
+  /// The site of the invoice: from its linked orders, or recognised from the customer reference.
+  site            Site?         @relation(fields: [siteId], references: [id])
+  siteId          String?
+  /// How the site was found: ORDER, ALIAS, NAME, CODE or POSTCODE.
+  siteMatchedBy   String?
   /// "Last invoice" printed on continuation invoices: links the chain of a hire order.
-  lastInvoiceNo String?
-  customerRef   String?
-  netPence      Int
-  vatPence      Int
-  grossPence    Int
-  filePath      String?
-  checkStatus   CheckStatus   @default(NOT_CHECKED)
-  paymentStatus PaymentStatus @default(UNPAID)
-  lines         InvoiceLine[]
-  findings      Finding[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  lastInvoiceNo   String?
+  customerRef     String?
+  netPence        Int
+  vatPence        Int
+  grossPence      Int
+  filePath        String?
+  checkStatus     CheckStatus   @default(NOT_CHECKED)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  lines           InvoiceLine[]
+  findings        Finding[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Duplicate invoice protection: an invoice number is unique per supplier.
   @@unique([supplierId, number])
@@ -239,4 +254,28 @@ model Suspension {
   createdAt  DateTime @default(now())
 
   @@index([siteId])
+}
+
+/// A customer reference as the supplier spells it ("RIVERSIDE", "Riverside Twr"), pointing to a site.
+model SiteAlias {
+  id     String @id @default(cuid())
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteId String
+  /// Stored normalised: upper case, letters and digits separated by single spaces.
+  alias  String @unique
+}
+
+/// A change of an item's fleet code (E-code), e.g. when the supplier swaps the item.
+model FleetCodeChange {
+  id         String   @id @default(cuid())
+  hireItem   HireItem @relation(fields: [hireItemId], references: [id], onDelete: Cascade)
+  hireItemId String
+  oldCode    String
+  newCode    String
+  changedOn  String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([hireItemId])
+  @@index([oldCode])
 }

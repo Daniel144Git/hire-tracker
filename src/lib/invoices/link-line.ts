@@ -1,4 +1,5 @@
-export type LinkProblem = "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE";
+export type LinkProblem =
+  "UNKNOWN_ORDER_REF" | "UNKNOWN_JOB_NO" | "UNKNOWN_FLEET_CODE" | "AMBIGUOUS_FLEET_CODE";
 
 export interface OrderForLinking {
   id: string;
