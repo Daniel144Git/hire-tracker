@@ -100,7 +100,7 @@ The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists ev
 
 - **Our order number** is the key from an invoice to a hire order when the supplier prints it ("Order No" on contract-layout invoices); the supplier's job number is the fallback, and the only key on despatch-layout invoices, where "Our Ref" is the supplier's job number.
 - **Fleet codes (E-codes)** link each invoice line to the item. When the supplier swaps an item, record its new code on the site page: the old code stays in the item's history, so invoices with either code link to the item, and the month-to-month check (R15) sees one item, not one gone and one unknown.
-- **The site** of an invoice is the site of its linked order. An invoice with no order is matched by the customer reference (the spellings recorded on the site page, then the name and code) and the delivery postcode, and never by a guess between two sites.
+- **The site** of an invoice is the site of its linked order. An invoice with no order is matched by the customer reference (the spellings recorded on the site page, then the name and code), then by a spelling or the site name in the delivery address, then by the delivery postcode, and never by a guess between two sites.
 - Lines that could not be linked are linked again automatically when the missing order, item or code is entered.
 
 ## Reading invoice PDFs

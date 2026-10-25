@@ -109,3 +109,4 @@ What I can explain about this project, phase by phase.
 - **File uploads done safely.** Size limit, PDF signature check, server-generated ids as file names (no path from the client), a path-traversal guard when reading back, `nosniff` on the download, and the files folder outside git. The test reset only empties a folder named `test-*`.
 - **Mutation checks.** Breaking the credit-note sign fails 2 unit tests; breaking the column threshold fails 14.
 - **Strict locators catch accessibility bugs.** The upload form and its file input had the same accessible name; Playwright's strict mode failed on the ambiguity, and the fix made the page clearer for screen readers too.
+- **Exploratory testing finds what unit tests cannot.** Uploading four real invoices through the screen showed two problems no test had asked about: an R8 finding on a credit line, and a site named only in the delivery address. Each became a failing unit test, then a fix.

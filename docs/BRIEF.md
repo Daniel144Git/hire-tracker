@@ -161,7 +161,7 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 
 - `HireOrder.orderRef` (unique) and `Invoice.orderRef`. `linkInvoiceLine` finds the header's order by our order number, then by job number; a line's fleet code matches an item's current or earlier codes. `UNKNOWN_ORDER_REF` joins the link problems, and R8 reports it once per invoice.
 - `FleetCodeChange` keeps an item's earlier codes. Recording a change re-links the supplier's unlinked lines and re-checks the order's invoices. R15 compares items, not raw codes, so a recorded change is the same item; one code gone plus one new code on the job is reported as a single possible swap.
-- `SiteAlias` stores how suppliers spell a site, normalised (upper case, letters and digits). `recognizeSite` tries, in order: a recorded alias, the exact name, the code as a word, every word of the reference in the name, the delivery postcode; when a rule fits two sites it returns them as candidates and picks none. `Invoice.siteId` comes from the first linked order (`siteMatchedBy = ORDER`), otherwise from recognition.
+- `SiteAlias` stores how suppliers spell a site, normalised (upper case, letters and digits). `recognizeSite` tries, in order: a recorded alias, the exact name, the code as a word, every word of the reference in the name, a recorded alias or the site name in a line of the delivery address (added in 5b: some invoices carry a PO number as the reference), the delivery postcode; when a rule fits two sites it returns them as candidates and picks none. `Invoice.siteId` comes from the first linked order (`siteMatchedBy = ORDER`), otherwise from recognition.
 - Unlinked lines are linked again when an order, an item, an order number or a fleet code is added or changed: an invoice can be entered before its order.
 
 **Implemented in Phase 5b:**
@@ -173,6 +173,7 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - **Credit notes** (both layouts) are stored with negative amounts, the period as printed.
 - **Nothing guessed, nothing saved unseen.** Missing fields are left empty with a warning; lines that do not add up to the net, or VAT more than half a penny per line away from the VAT printed, are reported. The form opens filled in and is saved only when the person saves it. The PDF is kept with the invoice (`Invoice.filePath`, under `INVOICE_FILES_DIR`).
 - **Checked on the real documents, locally:** 269 distinct invoices (261 despatch, 8 contract) read with no warnings. Three things found on real data were fixed test-first with fictional reproductions: VAT rounded on the total (R10), suspension credit rows, and a site block broken by our own address printed at other heights.
+- **Tried in the app with real invoices, locally:** four real invoices (REDACTED continuation with a suspension credit, REDACTED return, Star invoice, Star credit note) uploaded through the screen, read with no warnings, supplier found by account number, saved with the PDF. This found two more things, fixed test-first: R8 no longer flags a credit line (it costs nothing), and the site is also recognised from a spelling or name in the delivery address.
 - **Trades:** DUCT added (MECH, ELEC, VENT, DUCT, BMS), as on the cost allocation sheet.
 
 ## 5. Suggested data model
