@@ -110,3 +110,12 @@ What I can explain about this project, phase by phase.
 - **Mutation checks.** Breaking the credit-note sign fails 2 unit tests; breaking the column threshold fails 14.
 - **Strict locators catch accessibility bugs.** The upload form and its file input had the same accessible name; Playwright's strict mode failed on the ambiguity, and the fix made the page clearer for screen readers too.
 - **Exploratory testing finds what unit tests cannot.** Uploading four real invoices through the screen showed two problems no test had asked about: an R8 finding on a credit line, and a site named only in the delivery address. Each became a failing unit test, then a fix.
+
+## Phase 5c: supplier statements and R11
+
+- **Understand the document before writing the rule.** The brief said R11 flags an invoice we hold that is not on the statement. The real statements list only open invoices, so a paid invoice is never on them; applied literally, the rule would flag every paid invoice. The rule became: unpaid invoices dated before the statement must be on it, and "paid but still listed" is checked only on the latest statement.
+- **Derived data is computed, not stored.** The comparison is a pure function run on every view, so it can never go stale: an API test enters the missing invoice after the statement and the problem disappears.
+- **The acceptance test the user asked for.** Every real invoice and statement went through the API locally (269 invoices, seven statements, 325 lines): every amount equal, every invoice on a statement, the only gaps invoices older than the first month of documents. It also exposed a usability problem: hundreds of "not on the statement" rows that really meant "paid". One action now marks them paid, and the statements then match exactly.
+- **Refuse what cannot be trusted.** A statement whose lines do not add up to its own total is refused rather than half-imported, because every comparison after it would be built on a misread line.
+- **E2E tests find UX bugs.** The confirmation message vanished with the button it belonged to; the E2E test failed on it, and the form now stays on the page.
+- **Mutation checks on the boundaries:** "dated before" versus "on or before" the statement, and "latest statement only", each break a unit test when changed.

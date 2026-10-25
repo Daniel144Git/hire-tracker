@@ -13,7 +13,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import {
   assertUploadExists,
   keepUploadWithInvoice,
-  readInvoiceFile,
+  readStoredFile,
 } from "@/server/files/invoice-files";
 import { loadOrdersForLinking, resolveInvoiceSite } from "./linking";
 import { checkInvoice, recheckRelatedInvoices, toFindingDto } from "./reconciliation";
@@ -223,7 +223,10 @@ export async function getInvoiceFile(
     select: { number: true, filePath: true },
   });
   if (!invoice?.filePath) throw new NotFoundError("File of invoice", id);
-  return { number: invoice.number, bytes: await readInvoiceFile(invoice.filePath, id) };
+  return {
+    number: invoice.number,
+    bytes: await readStoredFile(invoice.filePath, { resource: "invoice", id }),
+  };
 }
 
 /** PATCH /api/invoices/:id: payment status (paid, queried...) and check status. */
