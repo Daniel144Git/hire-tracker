@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { monthSchema, optionalId } from "@/lib/schemas/filters";
 import { db } from "@/server/db";
 import { fromPence } from "@/lib/money";
 import { findMissingPeriods, monthRange } from "@/lib/reconciliation/missing-periods";
@@ -7,7 +8,9 @@ import { summarizeFindings } from "@/lib/reconciliation/report";
 import { chargingRulesOf } from "./reconciliation";
 
 export const reportQuerySchema = z.strictObject({
-  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM"),
+  month: monthSchema,
+  supplierId: optionalId,
+  siteId: optionalId,
 });
 
 const SEVERITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
@@ -17,11 +20,11 @@ const SEVERITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
  * the totals at stake, plus the orders on hire that month with no invoice at all (R4).
  */
 export async function getDiscrepancyReport(query: unknown) {
-  const { month } = reportQuerySchema.parse(query);
+  const { month, supplierId, siteId } = reportQuerySchema.parse(query);
   const range = monthRange(month);
 
   const invoices = await db.invoice.findMany({
-    where: { date: { gte: range.from, lte: range.to } },
+    where: { date: { gte: range.from, lte: range.to }, supplierId, siteId },
     include: {
       supplier: { select: { id: true, name: true } },
       findings: { include: { invoiceLine: { select: { position: true } } } },
@@ -63,17 +66,22 @@ export async function getDiscrepancyReport(query: unknown) {
     month,
     summary: { invoices: invoices.length, ...summarizeFindings(findings) },
     findings,
-    missingPeriods: await missingPeriodsFor(month),
+    missingPeriods: await missingPeriodsFor(month, { supplierId, siteId }),
   };
 }
 
 /** R4 for every supplier: orders on hire in the month with no billed hire period in it. */
-async function missingPeriodsFor(month: string) {
+async function missingPeriodsFor(
+  month: string,
+  filters: { supplierId?: string; siteId?: string } = {},
+) {
   const range = monthRange(month);
   const suppliers = await db.supplier.findMany({
+    where: { id: filters.supplierId },
     include: {
       orders: {
         where: {
+          siteId: filters.siteId,
           startDate: { lte: range.to },
           OR: [{ offHireDate: null }, { offHireDate: { gte: range.from } }],
         },

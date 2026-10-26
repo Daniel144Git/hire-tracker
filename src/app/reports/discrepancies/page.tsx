@@ -4,6 +4,9 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getDiscrepancyReport, getQueryEmails, reportQuerySchema } from "@/server/services/reports";
 import { QueryEmail } from "@/app/ui/query-email";
+import { FilterSelect, pickParams } from "@/app/ui/filters";
+import { listSites } from "@/server/services/sites";
+import { listSuppliers } from "@/server/services/suppliers";
 import { buttonClass } from "@/app/ui/field";
 import { CHECK_LABEL, formatPounds, SEVERITY_LABEL } from "@/app/invoices/format";
 
@@ -30,11 +33,13 @@ async function Report({
   // Default: the current month.
   const requested =
     typeof params.month === "string" ? params.month : new Date().toISOString().slice(0, 7);
-  const valid = reportQuerySchema.safeParse({ month: requested });
+  const filters = pickParams(params, ["supplierId", "siteId"]);
+  const valid = reportQuerySchema.safeParse({ month: requested, ...filters });
+  const [suppliers, sites] = await Promise.all([listSuppliers(), listSites()]);
 
   return (
     <>
-      <form method="get" className="flex items-end gap-3" aria-label="Choose a month">
+      <form method="get" className="flex flex-wrap items-end gap-3" aria-label="Choose a month">
         <div className="flex flex-col gap-1">
           <label htmlFor="report-month" className="text-sm font-medium">
             Month
@@ -47,12 +52,28 @@ async function Report({
             className="rounded border border-gray-400 bg-background px-2 py-1"
           />
         </div>
+        <FilterSelect
+          id="report-supplier"
+          name="supplierId"
+          label="Supplier"
+          allLabel="All suppliers"
+          value={filters.supplierId}
+          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+        />
+        <FilterSelect
+          id="report-site"
+          name="siteId"
+          label="Site"
+          allLabel="All sites"
+          value={filters.siteId}
+          options={sites.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }))}
+        />
         <button type="submit" className={buttonClass}>
           Show
         </button>
       </form>
       {valid.success ? (
-        <ReportContent month={valid.data.month} />
+        <ReportContent query={valid.data} />
       ) : (
         <p role="alert" className="text-red-700 dark:text-red-400">
           Choose a month as YYYY-MM.
@@ -62,11 +83,13 @@ async function Report({
   );
 }
 
-async function ReportContent({ month }: { month: string }) {
-  const [report, emails] = await Promise.all([
-    getDiscrepancyReport({ month }),
-    getQueryEmails({ month }),
-  ]);
+async function ReportContent({
+  query,
+}: {
+  query: { month: string; supplierId?: string; siteId?: string };
+}) {
+  const { month } = query;
+  const [report, emails] = await Promise.all([getDiscrepancyReport(query), getQueryEmails(query)]);
   const { summary } = report;
   const amount = (value: number | null) => (value === null ? "-" : formatPounds(value));
 

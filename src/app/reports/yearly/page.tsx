@@ -6,6 +6,9 @@ import { getYearlyTotals, yearlyQuerySchema } from "@/server/services/costs";
 import { buttonClass } from "@/app/ui/field";
 import { formatPounds } from "@/app/invoices/format";
 import type { YearlyTotals } from "@/lib/reports/allocation";
+import { FilterSelect, pickParams, queryString } from "@/app/ui/filters";
+import { listSites } from "@/server/services/sites";
+import { listSuppliers } from "@/server/services/suppliers";
 
 export const metadata: Metadata = { title: "Yearly totals" };
 
@@ -37,11 +40,13 @@ async function Report({
   const params = await searchParams;
   const requested =
     typeof params.year === "string" ? params.year : String(new Date().getUTCFullYear());
-  const valid = yearlyQuerySchema.safeParse({ year: requested });
+  const filters = pickParams(params, ["supplierId", "siteId"]);
+  const valid = yearlyQuerySchema.safeParse({ year: requested, ...filters });
+  const [suppliers, sites] = await Promise.all([listSuppliers(), listSites()]);
 
   return (
     <>
-      <form method="get" className="flex items-end gap-3" aria-label="Choose a year">
+      <form method="get" className="flex flex-wrap items-end gap-3" aria-label="Choose a year">
         <div className="flex flex-col gap-1">
           <label htmlFor="yearly-year" className="text-sm font-medium">
             Year
@@ -56,12 +61,28 @@ async function Report({
             className="w-28 rounded border border-gray-400 bg-background px-2 py-1"
           />
         </div>
+        <FilterSelect
+          id="yearly-supplier"
+          name="supplierId"
+          label="Supplier"
+          allLabel="All suppliers"
+          value={filters.supplierId}
+          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+        />
+        <FilterSelect
+          id="yearly-site"
+          name="siteId"
+          label="Site"
+          allLabel="All sites"
+          value={filters.siteId}
+          options={sites.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }))}
+        />
         <button type="submit" className={buttonClass}>
           Show
         </button>
       </form>
       {valid.success ? (
-        <Totals report={await getYearlyTotals({ year: valid.data.year })} />
+        <Totals report={await getYearlyTotals(valid.data)} filters={filters} />
       ) : (
         <p role="alert" className="text-red-700 dark:text-red-400">
           Choose a year from 2000.
@@ -71,10 +92,10 @@ async function Report({
   );
 }
 
-function Totals({ report }: { report: YearlyTotals }) {
+function Totals({ report, filters }: { report: YearlyTotals; filters: Record<string, string> }) {
   if (report.sites.length === 0) return <p>No invoices dated in {report.year}.</p>;
   const exportUrl = (format: string) =>
-    `/api/reports/yearly/export?year=${report.year}&format=${format}`;
+    `/api/reports/yearly/export${queryString({ year: String(report.year), ...filters, format })}`;
   const cell = (value: number) => (value === 0 ? "-" : formatPounds(value));
   return (
     <>
