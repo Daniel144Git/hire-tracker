@@ -12,6 +12,7 @@ const grooverLine = (overrides = {}) =>
   hireLine({
     id: "groover",
     position: 2,
+    description: "Pipe groover",
     fleetCode: "APX-PG-0317",
     hireItemId: "item-2",
     net: 173.42,
@@ -51,7 +52,7 @@ describe("R15: item tracking month to month, per job", () => {
         severity: "MEDIUM",
         invoiceLineId: null,
         message:
-          "APX-PG-0317 was billed on INV-20700 but is not on this invoice and has no return invoice: returned, lost or swapped? Confirm on site",
+          "Pipe groover (APX-PG-0317) was on the previous invoice of the job, INV-20700, but is not on this one, and no return is recorded for it: returned, lost or swapped? Confirm on site",
       }),
     ]);
   });
@@ -68,6 +69,60 @@ describe("R15: item tracking month to month, per job", () => {
     const ctx = context({ orders: [twoItems], otherInvoices: [julyBothItems, returnInvoice] });
 
     expect(itemTracking(ctx)).toEqual([]);
+  });
+
+  it("does not flag an item returned with a return credit note", () => {
+    // Billed to the end of July but returned before: the supplier credits the days after the
+    // return on a credit note of type Return, which is the return's record.
+    const returnCredit = invoice({
+      id: "credit",
+      number: "C-100",
+      date: "2026-08-31",
+      type: "RETURN",
+      isCreditNote: true,
+      lines: [
+        grooverLine({
+          id: "c",
+          periodFrom: "2026-07-31",
+          periodTo: "2026-07-28",
+          net: -15.03,
+          vat: -3.01,
+        }),
+      ],
+    });
+
+    const ctx = context({ orders: [twoItems], otherInvoices: [julyBothItems, returnCredit] });
+
+    expect(itemTracking(ctx)).toEqual([]);
+  });
+
+  it("still flags an item whose only credit is not a return", () => {
+    const partialCredit = invoice({
+      id: "credit",
+      number: "C-101",
+      date: "2026-08-31",
+      type: "CONTINUATION",
+      isCreditNote: true,
+      lines: [grooverLine({ id: "c", net: -10, vat: -2 })],
+    });
+
+    const ctx = context({ orders: [twoItems], otherInvoices: [julyBothItems, partialCredit] });
+
+    expect(itemTracking(ctx)).toHaveLength(1);
+  });
+
+  it("does not flag an item billed to an earlier day than the rest: it left that month", () => {
+    const leftOnThe25th = invoice({
+      ...julyBothItems,
+      lines: [
+        julyBothItems.lines[0],
+        grooverLine({ id: "july-groover", periodFrom: "2026-07-01", periodTo: "2026-07-25" }),
+      ],
+    });
+
+    expect(itemTracking(context({ orders: [twoItems], otherInvoices: [leftOnThe25th] }))).toEqual(
+      [],
+    );
   });
 
   it("does not flag a fleet code whose order was off-hired", () => {
@@ -91,7 +146,7 @@ describe("R15: item tracking month to month, per job", () => {
         severity: "LOW",
         invoiceLineId: "groover",
         message:
-          "APX-PG-0317 is new on job J100101 since INV-20700: item swapped? Check its rate and start date. Confirm on site",
+          "Pipe groover (APX-PG-0317) is new on job J100101 since the previous invoice INV-20700: item swapped? Check its rate and start date. Confirm on site",
       }),
     ]);
   });
@@ -156,7 +211,7 @@ describe("R15: item tracking month to month, per job", () => {
           severity: "MEDIUM",
           invoiceLineId: "groover",
           message:
-            "APX-PG-0317 (billed on INV-20700) is gone and APX-PG-0400 is new on job J100101: the same item swapped? Confirm on site, then record the new code on the item",
+            "Pipe groover (APX-PG-0317) on the previous invoice INV-20700 is gone and Pipe groover (APX-PG-0400) is new on job J100101: the same item swapped? Confirm on site, then record the new code on the item",
         }),
       ]);
     });
