@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { monthSchema, optionalId } from "@/lib/schemas/filters";
 import { db } from "@/server/db";
 import { fromPence } from "@/lib/money";
 import {
@@ -11,13 +12,23 @@ import {
 import { folderName, toCsv, toXlsx, toZip, type Cell } from "@/lib/exports/files";
 import { readStoredFile } from "@/server/files/invoice-files";
 
-const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM");
+const month = monthSchema;
+/** Optional: one supplier, one site. */
+const scope = { supplierId: optionalId, siteId: optionalId };
 const year = z.coerce.number().int().min(2000, "Year must be 2000 or later").max(9999);
 
-export const costsQuerySchema = z.strictObject({ month });
-export const yearlyQuerySchema = z.strictObject({ year });
-export const costsExportSchema = z.strictObject({ month, format: z.enum(["csv", "xlsx", "zip"]) });
-export const yearlyExportSchema = z.strictObject({ year, format: z.enum(["csv", "xlsx"]) });
+export const costsQuerySchema = z.strictObject({ month, ...scope });
+export const yearlyQuerySchema = z.strictObject({ year, ...scope });
+export const costsExportSchema = z.strictObject({
+  month,
+  ...scope,
+  format: z.enum(["csv", "xlsx", "zip"]),
+});
+export const yearlyExportSchema = z.strictObject({
+  year,
+  ...scope,
+  format: z.enum(["csv", "xlsx"]),
+});
 
 const MONTH_NAMES = [
   "Jan",
@@ -37,9 +48,10 @@ const MONTH_NAMES = [
 /** The invoices dated from `prefix` ("2026-08" or "2026"), shaped for allocation. */
 async function invoicesDated(
   prefix: string,
+  filters: { supplierId?: string; siteId?: string } = {},
 ): Promise<(InvoiceForAllocation & { filePath: string | null })[]> {
   const invoices = await db.invoice.findMany({
-    where: { date: { startsWith: prefix } },
+    where: { date: { startsWith: prefix }, supplierId: filters.supplierId, siteId: filters.siteId },
     orderBy: [{ date: "asc" }, { number: "asc" }],
     include: {
       site: { select: { id: true, code: true, name: true } },
@@ -68,14 +80,14 @@ async function invoicesDated(
 
 /** GET /api/reports/costs?month=YYYY-MM */
 export async function getMonthlyCosts(query: unknown): Promise<MonthlyAllocation> {
-  const { month } = costsQuerySchema.parse(query);
-  return allocateMonth(await invoicesDated(month), month);
+  const { month, ...filters } = costsQuerySchema.parse(query);
+  return allocateMonth(await invoicesDated(month, filters), month);
 }
 
 /** GET /api/reports/yearly?year=YYYY */
 export async function getYearlyTotals(query: unknown): Promise<YearlyTotals> {
-  const { year } = yearlyQuerySchema.parse(query);
-  return totalsByMonth(await invoicesDated(String(year)), year);
+  const { year, ...filters } = yearlyQuerySchema.parse(query);
+  return totalsByMonth(await invoicesDated(String(year), filters), year);
 }
 
 const siteCode = (site: { code: string } | null) => site?.code ?? "No site";
@@ -146,8 +158,8 @@ export interface ExportFile {
  * a ZIP with one folder per site holding its invoice PDFs and a summary CSV.
  */
 export async function exportMonthlyCosts(query: unknown): Promise<ExportFile> {
-  const { format, month } = costsExportSchema.parse(query);
-  const invoices = await invoicesDated(month);
+  const { format, month, ...filters } = costsExportSchema.parse(query);
+  const invoices = await invoicesDated(month, filters);
   const report = allocateMonth(invoices, month);
   const base = `hire-costs-${month}`;
   if (format === "csv") {
@@ -234,8 +246,8 @@ function yearlyRows(report: YearlyTotals): Cell[][] {
 
 /** The year as CSV or Excel: gross by site and month, with net, VAT and gross totals. */
 export async function exportYearlyTotals(query: unknown): Promise<ExportFile> {
-  const { format, year } = yearlyExportSchema.parse(query);
-  const report = totalsByMonth(await invoicesDated(String(year)), year);
+  const { format, year, ...filters } = yearlyExportSchema.parse(query);
+  const report = totalsByMonth(await invoicesDated(String(year), filters), year);
   const base = `hire-costs-${year}`;
   if (format === "csv") {
     return {

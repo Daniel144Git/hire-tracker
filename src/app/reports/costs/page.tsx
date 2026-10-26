@@ -6,6 +6,9 @@ import { costsQuerySchema, getMonthlyCosts } from "@/server/services/costs";
 import { buttonClass } from "@/app/ui/field";
 import { formatPounds } from "@/app/invoices/format";
 import type { MonthlyAllocation, TradeKey } from "@/lib/reports/allocation";
+import { FilterSelect, pickParams, queryString } from "@/app/ui/filters";
+import { listSites } from "@/server/services/sites";
+import { listSuppliers } from "@/server/services/suppliers";
 
 export const metadata: Metadata = { title: "Monthly costs" };
 
@@ -45,11 +48,13 @@ async function Report({
   const params = await searchParams;
   const requested =
     typeof params.month === "string" ? params.month : new Date().toISOString().slice(0, 7);
-  const valid = costsQuerySchema.safeParse({ month: requested });
+  const filters = pickParams(params, ["supplierId", "siteId"]);
+  const valid = costsQuerySchema.safeParse({ month: requested, ...filters });
+  const [suppliers, sites] = await Promise.all([listSuppliers(), listSites()]);
 
   return (
     <>
-      <form method="get" className="flex items-end gap-3" aria-label="Choose a month">
+      <form method="get" className="flex flex-wrap items-end gap-3" aria-label="Choose a month">
         <div className="flex flex-col gap-1">
           <label htmlFor="costs-month" className="text-sm font-medium">
             Month
@@ -62,12 +67,28 @@ async function Report({
             className="rounded border border-gray-400 bg-background px-2 py-1"
           />
         </div>
+        <FilterSelect
+          id="costs-supplier"
+          name="supplierId"
+          label="Supplier"
+          allLabel="All suppliers"
+          value={filters.supplierId}
+          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+        />
+        <FilterSelect
+          id="costs-site"
+          name="siteId"
+          label="Site"
+          allLabel="All sites"
+          value={filters.siteId}
+          options={sites.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }))}
+        />
         <button type="submit" className={buttonClass}>
           Show
         </button>
       </form>
       {valid.success ? (
-        <Costs report={await getMonthlyCosts({ month: valid.data.month })} />
+        <Costs report={await getMonthlyCosts(valid.data)} filters={filters} />
       ) : (
         <p role="alert" className="text-red-700 dark:text-red-400">
           Choose a month as YYYY-MM.
@@ -77,9 +98,17 @@ async function Report({
   );
 }
 
-function Costs({ report }: { report: MonthlyAllocation }) {
+function Costs({
+  report,
+  filters,
+}: {
+  report: MonthlyAllocation;
+  filters: Record<string, string>;
+}) {
   const { month } = report;
-  const exportUrl = (format: string) => `/api/reports/costs/export?month=${month}&format=${format}`;
+  // The downloads carry the same filters as the page.
+  const exportUrl = (format: string) =>
+    `/api/reports/costs/export${queryString({ month, ...filters, format })}`;
   if (report.invoiceCount === 0) return <p>No invoices dated in {month}.</p>;
 
   return (

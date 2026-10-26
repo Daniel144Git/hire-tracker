@@ -4,9 +4,11 @@ import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
 import { fromPence, toPence } from "@/lib/money";
 import { calculateDueDate } from "@/lib/invoices/due-date";
 import { linkInvoiceLine } from "@/lib/invoices/link-line";
+import { optionalId, optionalMonth, queryFlag } from "@/lib/schemas/filters";
 import {
   invoiceCreateSchema,
   invoiceUpdateSchema,
+  PAYMENT_STATUSES,
   type InvoiceLineInput,
 } from "@/lib/schemas/invoice";
 import type { Prisma } from "@/generated/prisma/client";
@@ -20,9 +22,20 @@ import { loadOrdersForLinking, resolveInvoiceSite } from "./linking";
 import { checkInvoice, recheckRelatedInvoices, toFindingDto } from "./reconciliation";
 
 export const invoiceFilterSchema = z.strictObject({
-  supplierId: z.string().min(1).optional(),
-  jobNo: z.string().trim().toUpperCase().min(1).optional(),
-  siteId: z.string().min(1).optional(),
+  supplierId: optionalId,
+  jobNo: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().trim().toUpperCase().min(1).optional(),
+  ),
+  siteId: optionalId,
+  /** Invoices dated in this month, YYYY-MM. */
+  month: optionalMonth,
+  paymentStatus: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.enum(PAYMENT_STATUSES).optional(),
+  ),
+  /** Only invoices with findings that are still open. */
+  openFindings: queryFlag.optional(),
 });
 
 const summaryInclude = {
@@ -123,9 +136,13 @@ export type InvoiceSummaryDto = ReturnType<typeof summaryDto>;
 export type InvoiceDto = ReturnType<typeof detailDto>;
 
 export async function listInvoices(filters: unknown = {}): Promise<InvoiceSummaryDto[]> {
-  const where = invoiceFilterSchema.parse(filters);
+  const { month, openFindings, ...where } = invoiceFilterSchema.parse(filters);
   const invoices = await db.invoice.findMany({
-    where,
+    where: {
+      ...where,
+      ...(month ? { date: { startsWith: `${month}-` } } : {}),
+      ...(openFindings ? { findings: { some: { resolved: false } } } : {}),
+    },
     include: summaryInclude,
     orderBy: [{ date: "desc" }, { number: "asc" }],
   });

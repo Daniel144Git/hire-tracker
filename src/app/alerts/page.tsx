@@ -6,6 +6,9 @@ import { alertsQuerySchema, getHireAlerts } from "@/server/services/alerts";
 import { buttonClass } from "@/app/ui/field";
 import { formatPounds } from "@/app/invoices/format";
 import type { HireAlertKind } from "@/lib/register/alerts";
+import { FilterSelect } from "@/app/ui/filters";
+import { listSites } from "@/server/services/sites";
+import { listSuppliers } from "@/server/services/suppliers";
 
 export const metadata: Metadata = { title: "Alerts" };
 
@@ -41,7 +44,11 @@ async function Alerts({ searchParams }: { searchParams: PageProps<"/alerts">["se
       </p>
     );
   }
-  const { asOf, settings, alerts } = await getHireAlerts(parsed.data);
+  const [{ asOf, settings, alerts }, suppliers, sites] = await Promise.all([
+    getHireAlerts(parsed.data),
+    listSuppliers(),
+    listSites(),
+  ]);
 
   return (
     <>
@@ -65,6 +72,22 @@ async function Alerts({ searchParams }: { searchParams: PageProps<"/alerts">["se
             />
           </div>
         ))}
+        <FilterSelect
+          id="alerts-supplier"
+          name="supplierId"
+          label="Supplier"
+          allLabel="All suppliers"
+          value={parsed.data.supplierId}
+          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+        />
+        <FilterSelect
+          id="alerts-site"
+          name="siteId"
+          label="Site"
+          allLabel="All sites"
+          value={parsed.data.siteId}
+          options={sites.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }))}
+        />
         <button type="submit" className={buttonClass}>
           Show
         </button>

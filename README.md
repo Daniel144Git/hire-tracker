@@ -45,45 +45,45 @@ The API and E2E tests build the app and start their own production server on por
 
 Endpoints take and return JSON, except that a PDF is sent as a multipart form and an invoice's PDF comes back as a PDF. Money is in pounds, dates are `YYYY-MM-DD`. Every error has the same shape: `{ "error": { "code", "message", "issues"? } }`.
 
-| Method and path                                                  | What it does                                                                                                             | Errors                        |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| `GET /api/health`                                                | Health check                                                                                                             |                               |
-| `GET, POST /api/suppliers`                                       | List or create suppliers and their charging profile                                                                      | 400, 409 duplicate name       |
-| `GET, POST /api/sites`                                           | List or create sites                                                                                                     | 400, 409 duplicate code       |
-| `GET, PATCH /api/sites/:id`                                      | Get or edit a site                                                                                                       | 400, 404, 409                 |
-| `GET /api/orders?siteId=&status=`                                | List hire orders, filtered by site and status                                                                            | 400                           |
-| `POST /api/orders`                                               | Create a hire order with its items                                                                                       | 400, 409 duplicate job number |
-| `GET, PATCH /api/orders/:id`                                     | Get an order, or change its trade or damage waiver                                                                       | 400, 404                      |
-| `POST /api/orders/:id/items`                                     | Add an item or accessory to an order                                                                                     | 400, 404                      |
-| `POST /api/orders/:id/off-hire`                                  | Off-hire: date and optional collection number                                                                            | 400, 404, 409 not on hire     |
-| `POST /api/orders/:id/collection`                                | Record the collection of an off-hired order                                                                              | 400, 404, 409 not off-hired   |
-| `GET /api/invoices?supplierId=&jobNo=`                           | List invoices with due dates, lines not linked and open findings                                                         | 400                           |
-| `POST /api/invoices`                                             | Record an invoice as printed; due date from the supplier's terms; lines linked to orders; checks run                     | 400, 409 duplicate number     |
-| `POST /api/invoices/extract`                                     | Read an invoice PDF (multipart field `file`) into a draft to check; the PDF is kept; nothing is saved as an invoice      | 400 not a PDF                 |
-| `GET /api/invoices/:id/file`                                     | The invoice's PDF, when it was uploaded (`hasFile` on the invoice)                                                       | 404                           |
-| `GET /api/invoices/:id`                                          | Get an invoice with its lines, what each line is linked to, and its findings                                             | 404                           |
-| `POST /api/invoices/:id/check`                                   | Run the reconciliation checks again and return the findings                                                              | 404                           |
-| `GET, POST /api/sites/:id/suspensions`                           | List or record site suspensions (free days credited); re-checks the site's invoices                                      | 400, 404                      |
-| `GET /api/reports/discrepancies?month=YYYY-MM`                   | The month's findings, totals and orders on hire with no invoice                                                          | 400                           |
-| `GET /api/sites/:id/on-hire?asOf=YYYY-MM-DD`                     | The site's on-hire register: items on site, days on hire, cost and billed to date                                        | 400, 404                      |
-| `PATCH /api/invoices/:id`                                        | Change the payment status (paid, queried, credited) or the check status; nothing else                                    | 400, 404                      |
-| `GET /api/payments/due?asOf=YYYY-MM-DD`                          | Unpaid invoices: overdue, due in 7 and 14 days, later; queried ones apart; totals per site                               | 400                           |
-| `GET, POST /api/sites/:id/service-events`                        | Services, inspections, repairs, damage and losses recorded on site; recording one re-checks the site's invoices (R9)     | 400, 404                      |
-| `GET /api/invoices/:id/query-email`                              | A query email to the supplier drafted from the invoice's open findings, or `null`; nothing is sent                       | 404                           |
-| `GET /api/reports/discrepancies/query-emails?month=`             | One query email per supplier for the month's open findings                                                               | 400                           |
-| `GET /api/alerts?asOf=&longHireDays=&costLimit=&collectionDays=` | Long hires, costly hires and off-hired items not collected, on every site                                                | 400                           |
-| `GET /api/reports/costs?month=YYYY-MM`                           | The month's hire cost by site and trade, with the lines behind each site                                                 | 400                           |
-| `GET /api/reports/costs/export?month=&format=csv\|xlsx\|zip`     | The month as CSV (every line), Excel (summary and lines) or a ZIP with a folder per site: its invoice PDFs and a summary | 400                           |
-| `GET /api/reports/yearly?year=YYYY`                              | Each site's cost by month, with month and year totals                                                                    | 400                           |
-| `GET /api/reports/yearly/export?year=&format=csv\|xlsx`          | The year as CSV or Excel                                                                                                 | 400                           |
-| `GET, POST /api/statements`                                      | List statements with how many lines match, or add one as JSON (the lines must add up to `total` when given)              | 400, 409 same date            |
-| `POST /api/statements/upload`                                    | Import a statement PDF (multipart field `file`): supplier by account number; refused if it does not add up               | 400                           |
-| `GET /api/statements/:id`                                        | The statement's lines and the R11 comparison with our invoices, worked out now                                           | 404                           |
-| `GET /api/statements/:id/file`                                   | The statement's PDF                                                                                                      | 404                           |
-| `POST /api/statements/:id/mark-paid`                             | Mark paid our unpaid invoices dated before the statement that it no longer lists                                         | 404                           |
-| `PUT /api/sites/:id/aliases`                                     | Replace how suppliers spell the site in the customer reference                                                           | 400, 404, 409 duplicate alias |
-| `GET /api/sites/recognize?customerRef=&deliveryAddress=`         | Which site a customer reference and address point to (alias, name, code, postcode)                                       | 400                           |
-| `POST /api/orders/:id/items/:itemId/fleet-code`                  | Record a new fleet code (E-code) for a swapped item; links and re-checks the invoices                                    | 400, 404                      |
+| Method and path                                                                        | What it does                                                                                                             | Errors                        |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| `GET /api/health`                                                                      | Health check                                                                                                             |                               |
+| `GET, POST /api/suppliers`                                                             | List or create suppliers and their charging profile                                                                      | 400, 409 duplicate name       |
+| `GET, POST /api/sites`                                                                 | List or create sites                                                                                                     | 400, 409 duplicate code       |
+| `GET, PATCH /api/sites/:id`                                                            | Get or edit a site                                                                                                       | 400, 404, 409                 |
+| `GET /api/orders?siteId=&status=`                                                      | List hire orders, filtered by site and status                                                                            | 400                           |
+| `POST /api/orders`                                                                     | Create a hire order with its items                                                                                       | 400, 409 duplicate job number |
+| `GET, PATCH /api/orders/:id`                                                           | Get an order, or change its trade or damage waiver                                                                       | 400, 404                      |
+| `POST /api/orders/:id/items`                                                           | Add an item or accessory to an order                                                                                     | 400, 404                      |
+| `POST /api/orders/:id/off-hire`                                                        | Off-hire: date and optional collection number                                                                            | 400, 404, 409 not on hire     |
+| `POST /api/orders/:id/collection`                                                      | Record the collection of an off-hired order                                                                              | 400, 404, 409 not off-hired   |
+| `GET /api/invoices?supplierId=&siteId=&month=&paymentStatus=&openFindings=true&jobNo=` | List invoices with due dates, lines not linked and open findings, filtered                                               | 400                           |
+| `POST /api/invoices`                                                                   | Record an invoice as printed; due date from the supplier's terms; lines linked to orders; checks run                     | 400, 409 duplicate number     |
+| `POST /api/invoices/extract`                                                           | Read an invoice PDF (multipart field `file`) into a draft to check; the PDF is kept; nothing is saved as an invoice      | 400 not a PDF                 |
+| `GET /api/invoices/:id/file`                                                           | The invoice's PDF, when it was uploaded (`hasFile` on the invoice)                                                       | 404                           |
+| `GET /api/invoices/:id`                                                                | Get an invoice with its lines, what each line is linked to, and its findings                                             | 404                           |
+| `POST /api/invoices/:id/check`                                                         | Run the reconciliation checks again and return the findings                                                              | 404                           |
+| `GET, POST /api/sites/:id/suspensions`                                                 | List or record site suspensions (free days credited); re-checks the site's invoices                                      | 400, 404                      |
+| `GET /api/reports/discrepancies?month=YYYY-MM`                                         | The month's findings, totals and orders on hire with no invoice                                                          | 400                           |
+| `GET /api/sites/:id/on-hire?asOf=YYYY-MM-DD`                                           | The site's on-hire register: items on site, days on hire, cost and billed to date                                        | 400, 404                      |
+| `PATCH /api/invoices/:id`                                                              | Change the payment status (paid, queried, credited) or the check status; nothing else                                    | 400, 404                      |
+| `GET /api/payments/due?asOf=YYYY-MM-DD`                                                | Unpaid invoices: overdue, due in 7 and 14 days, later; queried ones apart; totals per site                               | 400                           |
+| `GET, POST /api/sites/:id/service-events`                                              | Services, inspections, repairs, damage and losses recorded on site; recording one re-checks the site's invoices (R9)     | 400, 404                      |
+| `GET /api/invoices/:id/query-email`                                                    | A query email to the supplier drafted from the invoice's open findings, or `null`; nothing is sent                       | 404                           |
+| `GET /api/reports/discrepancies/query-emails?month=`                                   | One query email per supplier for the month's open findings                                                               | 400                           |
+| `GET /api/alerts?asOf=&longHireDays=&costLimit=&collectionDays=`                       | Long hires, costly hires and off-hired items not collected, on every site                                                | 400                           |
+| `GET /api/reports/costs?month=YYYY-MM`                                                 | The month's hire cost by site and trade, with the lines behind each site                                                 | 400                           |
+| `GET /api/reports/costs/export?month=&format=csv\|xlsx\|zip`                           | The month as CSV (every line), Excel (summary and lines) or a ZIP with a folder per site: its invoice PDFs and a summary | 400                           |
+| `GET /api/reports/yearly?year=YYYY`                                                    | Each site's cost by month, with month and year totals                                                                    | 400                           |
+| `GET /api/reports/yearly/export?year=&format=csv\|xlsx`                                | The year as CSV or Excel                                                                                                 | 400                           |
+| `GET, POST /api/statements`                                                            | List statements with how many lines match, or add one as JSON (the lines must add up to `total` when given)              | 400, 409 same date            |
+| `POST /api/statements/upload`                                                          | Import a statement PDF (multipart field `file`): supplier by account number; refused if it does not add up               | 400                           |
+| `GET /api/statements/:id`                                                              | The statement's lines and the R11 comparison with our invoices, worked out now                                           | 404                           |
+| `GET /api/statements/:id/file`                                                         | The statement's PDF                                                                                                      | 404                           |
+| `POST /api/statements/:id/mark-paid`                                                   | Mark paid our unpaid invoices dated before the statement that it no longer lists                                         | 404                           |
+| `PUT /api/sites/:id/aliases`                                                           | Replace how suppliers spell the site in the customer reference                                                           | 400, 404, 409 duplicate alias |
+| `GET /api/sites/recognize?customerRef=&deliveryAddress=`                               | Which site a customer reference and address point to (alias, name, code, postcode)                                       | 400                           |
+| `POST /api/orders/:id/items/:itemId/fleet-code`                                        | Record a new fleet code (E-code) for a swapped item; links and re-checks the invoices                                    | 400, 404                      |
 
 ## Reconciliation checks
 
@@ -153,6 +153,15 @@ Because the comparison is worked out each time, entering a missing invoice later
 - **Services, repairs, damage and losses** are recorded on the site page. A charge for damage, loss, repair or service must match one (R9): the real invoices show charges for lost and damaged parts that nobody on site had confirmed.
 - **Query emails.** The invoice page and the monthly report draft a query to the supplier from the open findings: each finding, what it overcharged, and the total. Gaps in our own records (a job we have no order for, an unknown site) are left out. The draft can be edited, copied or opened in your email app; the app never sends anything.
 - **Alerts** (`/alerts`): items on hire for 12 weeks or more (still needed?), items that have cost £1,000 or more (buy instead?), and off-hired items not collected after 7 days. The limits can be changed on the page.
+
+## Filters
+
+Suppliers are kept apart wherever it matters (linking, checks, statements, query emails); the pages that add them together can be narrowed down:
+
+- **Invoices:** supplier, site, month, payment status, only those with open findings.
+- **Discrepancy report and its query emails, monthly and yearly costs (and their downloads), alerts:** supplier and site.
+
+Every filter is a query parameter of the API too; an empty value means "all".
 
 ## Demo data
 

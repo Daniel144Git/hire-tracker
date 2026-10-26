@@ -2,11 +2,14 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { DEFAULT_ALERT_SETTINGS, hireAlerts } from "@/lib/register/alerts";
 import { isoDateSchema } from "@/lib/schemas/common";
+import { optionalId } from "@/lib/schemas/filters";
 import { today } from "@/lib/schemas/as-of";
 import { getOnHireRegister } from "./register";
 
 export const alertsQuerySchema = z.strictObject({
   asOf: isoDateSchema.optional(),
+  supplierId: optionalId,
+  siteId: optionalId,
   longHireDays: z.coerce
     .number()
     .int()
@@ -24,11 +27,21 @@ export const alertsQuerySchema = z.strictObject({
 
 /** GET /api/alerts: long hires, costly hires and items not collected, on every site. */
 export async function getHireAlerts(query: unknown = {}) {
-  const { asOf = today(), ...settings } = alertsQuerySchema.parse(query);
-  const sites = await db.site.findMany({ select: { id: true }, orderBy: { code: "asc" } });
+  const { asOf = today(), supplierId, siteId, ...settings } = alertsQuerySchema.parse(query);
+  const sites = await db.site.findMany({
+    where: { id: siteId },
+    select: { id: true },
+    orderBy: { code: "asc" },
+  });
+  const supplier = supplierId
+    ? await db.supplier.findUnique({ where: { id: supplierId }, select: { name: true } })
+    : null;
   const registers = await Promise.all(sites.map((site) => getOnHireRegister(site.id, { asOf })));
   const rows = registers.flatMap((register) =>
-    register.rows.map((row) => ({ ...row, site: register.site })),
+    register.rows
+      // Supplier names are unique, and the register rows carry the name.
+      .filter((row) => !supplierId || row.supplierName === supplier?.name)
+      .map((row) => ({ ...row, site: register.site })),
   );
   return { asOf, settings, alerts: hireAlerts(rows, asOf, settings) };
 }
