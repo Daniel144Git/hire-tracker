@@ -15,12 +15,26 @@ function identityOf(code: string, context: ReconciliationContext): string {
   return `code:${code}`;
 }
 
+interface BilledItem {
+  code: string;
+  lineId: string;
+  /** "Pipe groover (APX-PG-0317)": how the item reads in a message. */
+  label: string;
+  /** The last day billed for it on the invoice. */
+  periodTo: string | null;
+}
+
 /** Identity -> one fleet code billed for it on the invoice, and the line. */
 function billedItems(invoice: CheckInvoice, context: ReconciliationContext) {
-  const items = new Map<string, { code: string; lineId: string }>();
+  const items = new Map<string, BilledItem>();
   for (const line of invoice.lines.filter(isHireCharge)) {
-    if (line.fleetCode)
-      items.set(identityOf(line.fleetCode, context), { code: line.fleetCode, lineId: line.id });
+    if (!line.fleetCode) continue;
+    items.set(identityOf(line.fleetCode, context), {
+      code: line.fleetCode,
+      lineId: line.id,
+      label: `${line.description} (${line.fleetCode})`,
+      periodTo: line.periodTo,
+    });
   }
   return items;
 }
@@ -28,7 +42,7 @@ function billedItems(invoice: CheckInvoice, context: ReconciliationContext) {
 /**
  * R15: item tracking month to month, per job number. Compares the items billed on this invoice
  * with the previous continuation invoice of the job:
- * - an item that is gone, with no return invoice and no off-hire: returned, lost, swapped?
+ * - an item that is gone with no return recorded (see leftSite): returned, lost, swapped?
  * - a new item on an existing job: an item swapped? (LOW)
  * - exactly one gone and one new: one possible swap, to confirm and record.
  * A recorded change of fleet code (E-code) is the same item, so it is not reported.
@@ -49,7 +63,7 @@ export const itemTracking: Check = (context) => {
   // A return invoice lists only the items that went back, so absences mean nothing there.
   const gone =
     invoice.type === "CONTINUATION"
-      ? [...before].filter(([id, { code }]) => !now.has(id) && !leftSite(code, previous, context))
+      ? [...before].filter(([id, item]) => !now.has(id) && !leftSite(item, previous, context))
       : [];
   const added = [...now].filter(([id]) => !before.has(id));
 
@@ -61,47 +75,62 @@ export const itemTracking: Check = (context) => {
         "R15",
         "MEDIUM",
         newItem.lineId,
-        `${oldItem.code} (billed on ${previous.number}) is gone and ${newItem.code} is new on job ${invoice.jobNo}: the same item swapped? Confirm on site, then record the new code on the item`,
+        `${oldItem.label} on the previous invoice ${previous.number} is gone and ${newItem.label} is new on job ${invoice.jobNo}: the same item swapped? Confirm on site, then record the new code on the item`,
       ),
     ];
   }
 
-  const findings: Finding[] = gone.map(([, { code }]) =>
+  const findings: Finding[] = gone.map(([, { label }]) =>
     finding(
       "R15",
       "MEDIUM",
       null,
-      `${code} was billed on ${previous.number} but is not on this invoice and has no return invoice: returned, lost or swapped? Confirm on site`,
+      `${label} was on the previous invoice of the job, ${previous.number}, but is not on this one, and no return is recorded for it: returned, lost or swapped? Confirm on site`,
     ),
   );
-  for (const [, { code, lineId }] of added) {
+  for (const [, { label, lineId }] of added) {
     findings.push(
       finding(
         "R15",
         "LOW",
         lineId,
-        `${code} is new on job ${invoice.jobNo} since ${previous.number}: item swapped? Check its rate and start date. Confirm on site`,
+        `${label} is new on job ${invoice.jobNo} since the previous invoice ${previous.number}: item swapped? Check its rate and start date. Confirm on site`,
       ),
     );
   }
   return findings;
 };
 
-/** The item went back: its order was off-hired, or a return invoice after `previous` bills it. */
-function leftSite(code: string, previous: CheckInvoice, context: ReconciliationContext): boolean {
+/**
+ * The item went back, as the documents show it:
+ * - its order was off-hired;
+ * - a return after `previous` lists it: a return invoice, or a credit note of type Return (the
+ *   supplier credits the days billed after the return);
+ * - `previous` billed it to an earlier day than the other items, so it left during that period.
+ */
+function leftSite(
+  item: BilledItem,
+  previous: CheckInvoice,
+  context: ReconciliationContext,
+): boolean {
+  const { code } = item;
   const offHired = Object.values(context.orders).some(
     (order) =>
       order.offHireDate !== null &&
-      order.items.some(
-        (item) => item.fleetCode === code || item.previousFleetCodes?.includes(code),
-      ),
+      order.items.some((i) => i.fleetCode === code || i.previousFleetCodes?.includes(code)),
   );
   const returned = [...context.otherInvoices, context.invoice].some(
     (other) =>
       other.type === "RETURN" &&
-      !other.isCreditNote &&
       isBefore(previous.date, other.date) &&
       other.lines.some((line) => line.fleetCode === code),
   );
-  return offHired || returned;
+  const periodEnds = previous.lines
+    .filter(isHireCharge)
+    .map((line) => line.periodTo)
+    .filter((day): day is string => day !== null);
+  const lastDay = periodEnds.sort().at(-1);
+  const endedEarly =
+    item.periodTo !== null && lastDay !== undefined && isBefore(item.periodTo, lastDay);
+  return offHired || returned || endedEarly;
 }

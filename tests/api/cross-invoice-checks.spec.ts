@@ -143,7 +143,9 @@ test.describe("Checks across invoices, orders and sites", () => {
       expect.objectContaining({
         check: "R15",
         severity: "MEDIUM",
-        message: expect.stringContaining(`${groover.fleetCode} was billed on INV-`),
+        message: expect.stringContaining(
+          `(${groover.fleetCode}) was on the previous invoice of the job, INV-`,
+        ),
       }),
     ]);
   });
