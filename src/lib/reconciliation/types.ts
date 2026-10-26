@@ -75,6 +75,8 @@ export interface CheckOrder {
     id: string;
     description: string;
     fleetCode: string | null;
+    /** How many are hired on the item; 1 when not given. */
+    qty?: number;
     weeklyRate: number;
     /** Codes the item had before a recorded change (E-code swap). */
     previousFleetCodes?: string[];
@@ -87,6 +89,10 @@ export interface SupplierItem {
   supplierJobNo: string;
   description: string;
   weeklyRate: number;
+  /** Null when the item is not identified by a fleet code (E-code). */
+  fleetCode: string | null;
+  qty: number;
+  orderStartDate: IsoDate;
 }
 
 /** A site suspension: free days the supplier must credit on every hire line of the period. */
