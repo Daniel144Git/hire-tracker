@@ -96,7 +96,9 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
         orderId: true,
         description: true,
         weeklyRatePence: true,
-        order: { select: { supplierJobNo: true } },
+        fleetCode: true,
+        qty: true,
+        order: { select: { supplierJobNo: true, startDate: true } },
       },
     }),
     db.suspension.findMany({
@@ -120,6 +122,7 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
       id: item.id,
       description: item.description,
       fleetCode: item.fleetCode,
+      qty: item.qty,
       weeklyRate: fromPence(item.weeklyRatePence),
       previousFleetCodes: item.codeChanges.map((change) => change.oldCode),
     })),
@@ -134,6 +137,9 @@ async function buildContext(invoiceId: string): Promise<ReconciliationContext> {
       supplierJobNo: item.order.supplierJobNo,
       description: item.description,
       weeklyRate: fromPence(item.weeklyRatePence),
+      fleetCode: item.fleetCode,
+      qty: item.qty,
+      orderStartDate: item.order.startDate,
     })),
     suspensions: suspensions.map((suspension) => ({
       siteId: suspension.siteId,
