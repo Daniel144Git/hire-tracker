@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { invoiceFilterSchema, listInvoices } from "@/server/services/invoices";
+import { listInvoiceDrafts } from "@/server/services/invoice-import";
 import { listSites } from "@/server/services/sites";
 import { listSuppliers } from "@/server/services/suppliers";
 import { buttonClass } from "@/app/ui/field";
@@ -16,9 +17,23 @@ export default function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Invoices</h1>
-        <Link href="/invoices/new" className="rounded bg-blue-700 px-3 py-1 font-medium text-white">
-          Enter an invoice
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Suspense fallback={null}>
+            <ToCheckLink />
+          </Suspense>
+          <Link
+            href="/invoices/upload"
+            className="rounded border border-gray-500 px-3 py-1 font-medium"
+          >
+            Upload invoices
+          </Link>
+          <Link
+            href="/invoices/new"
+            className="rounded bg-blue-700 px-3 py-1 font-medium text-white"
+          >
+            Enter an invoice
+          </Link>
+        </div>
       </div>
       <Suspense fallback={<p>Loading invoices…</p>}>
         <InvoicesTable searchParams={searchParams} />
@@ -176,5 +191,20 @@ function InvoiceList({ invoices }: { invoices: Awaited<ReturnType<typeof listInv
         ))}
       </tbody>
     </table>
+  );
+}
+
+/** Shown when invoices from an upload are waiting to be checked. */
+async function ToCheckLink() {
+  await connection();
+  const count = (await listInvoiceDrafts()).length;
+  if (count === 0) return null;
+  return (
+    <Link
+      href="/invoices/review"
+      className="font-medium text-amber-800 underline dark:text-amber-400"
+    >
+      {count} to check
+    </Link>
   );
 }

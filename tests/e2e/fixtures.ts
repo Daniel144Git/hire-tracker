@@ -5,6 +5,7 @@ import { CostsPage } from "./pages/costs.page";
 import { DiscrepancyReportPage } from "./pages/discrepancy-report.page";
 import { HomePage } from "./pages/home.page";
 import { InvoiceFormPage } from "./pages/invoice-form.page";
+import { InvoiceUploadPage } from "./pages/invoice-upload.page";
 import { InvoicePage } from "./pages/invoice.page";
 import { InvoicesPage } from "./pages/invoices.page";
 import { PaymentsPage } from "./pages/payments.page";
@@ -18,6 +19,7 @@ type Fixtures = {
   sitePage: SitePage;
   invoicesPage: InvoicesPage;
   invoiceFormPage: InvoiceFormPage;
+  invoiceUploadPage: InvoiceUploadPage;
   invoicePage: InvoicePage;
   reportPage: DiscrepancyReportPage;
   paymentsPage: PaymentsPage;
@@ -48,6 +50,9 @@ export const test = base.extend<Fixtures>({
   },
   invoiceFormPage: async ({ page }, use) => {
     await use(new InvoiceFormPage(page));
+  },
+  invoiceUploadPage: async ({ page }, use) => {
+    await use(new InvoiceUploadPage(page));
   },
   invoicePage: async ({ page }, use) => {
     await use(new InvoicePage(page));

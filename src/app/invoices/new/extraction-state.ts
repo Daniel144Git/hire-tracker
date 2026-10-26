@@ -8,6 +8,8 @@ export interface ExtractionState extends FormState {
     /** The invoice form's fields, filled in from the PDF. */
     values: Record<string, string>;
     warnings: string[];
+    /** The required fields still empty, marked on the form. */
+    missing: Record<string, string>;
   };
 }
 
