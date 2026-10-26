@@ -191,6 +191,7 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - **Reports add up to the invoices:** `linesWithInvoiceVat` spreads the penny difference of VAT rounded once on the total over the largest lines, so per-site and per-trade totals add up to the printed invoices (4.3). Sums are kept in pence.
 - **Exports:** CSV (every line), Excel written directly as a minimal .xlsx (a ZIP of XML, numbers as numbers, no library beyond `fflate`), and the ZIP of invoice PDFs with one folder per site and a summary CSV in each (Florin's request). Text that a spreadsheet could run as a formula is written as text.
 - **Checked locally on the real August invoices:** 40 invoices, £REDACTED gross, the ZIP with one folder per site and every PDF in it.
+- **Final acceptance with the real documents (local only),** after importing the 62 real orders: every one of the seven statements matches the invoices (only the 22 January invoices missing, which add up exactly to the spreadsheet's January total, £REDACTED); every one of the 260 invoices in the per-site folders has the same site in the app; and the app's monthly totals by site match the spreadsheet's "Total 2026" tab to the penny, net and gross, for every month from February to September.
 
 **Implemented in Phase 7:**
 
