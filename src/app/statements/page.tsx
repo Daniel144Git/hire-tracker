@@ -39,7 +39,7 @@ async function StatementsTable() {
     <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">Statements</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">Date</th>
           <th scope="col">Supplier</th>
           <th scope="col" className="text-right">
@@ -52,7 +52,7 @@ async function StatementsTable() {
       </thead>
       <tbody>
         {statements.map((statement) => (
-          <tr key={statement.id} className="border-b border-gray-200">
+          <tr key={statement.id} className="border-b border-line">
             <th scope="row" className="py-2 font-medium">
               <Link href={`/statements/${statement.id}`} className="underline">
                 {statement.date}

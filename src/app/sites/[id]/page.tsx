@@ -105,7 +105,7 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
           <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
             <caption className="sr-only">Hire suspensions</caption>
             <thead>
-              <tr className="border-b border-gray-400">
+              <tr className="border-b border-line-strong">
                 <th scope="col">Period</th>
                 <th scope="col">Free days</th>
                 <th scope="col">Note</th>
@@ -113,7 +113,7 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
             </thead>
             <tbody>
               {suspensions.map((suspension) => (
-                <tr key={suspension.id} className="border-b border-gray-200">
+                <tr key={suspension.id} className="border-b border-line">
                   <th scope="row" className="py-2 font-normal whitespace-nowrap">
                     {suspension.periodFrom} to {suspension.periodTo}
                   </th>
@@ -141,7 +141,7 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
           <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
             <caption className="sr-only">Services, repairs, damage and losses</caption>
             <thead>
-              <tr className="border-b border-gray-400">
+              <tr className="border-b border-line-strong">
                 <th scope="col">Date</th>
                 <th scope="col">What happened</th>
                 <th scope="col">Fleet code</th>
@@ -151,7 +151,7 @@ async function SiteDetails({ params }: { params: Promise<{ id: string }> }) {
             </thead>
             <tbody>
               {events.map((event) => (
-                <tr key={event.id} className="border-b border-gray-200">
+                <tr key={event.id} className="border-b border-line">
                   <th scope="row" className="py-2 font-normal whitespace-nowrap">
                     {event.date}
                   </th>
@@ -200,7 +200,7 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
     <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">Hire orders on this site</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col" className="py-2">
             Job no
           </th>
@@ -216,7 +216,7 @@ function OrdersTable({ orders }: { orders: OrderDto[] }) {
       </thead>
       <tbody>
         {orders.map((order) => (
-          <tr key={order.id} className="border-b border-gray-200 align-top">
+          <tr key={order.id} className="border-b border-line align-top">
             <th scope="row" className="py-2 font-medium">
               {order.supplierJobNo}
             </th>
@@ -267,7 +267,7 @@ function OnHireTable({ register }: { register: OnHireRegister }) {
     <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="text-left text-sm">As of {asOf}, at the agreed rates</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">Item</th>
           <th scope="col">Job no</th>
           <th scope="col">Since</th>
@@ -287,7 +287,7 @@ function OnHireTable({ register }: { register: OnHireRegister }) {
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.itemId} className="border-b border-gray-200 align-top">
+          <tr key={row.itemId} className="border-b border-line align-top">
             <th scope="row" className="py-2 font-normal">
               {row.qty > 1 && `${row.qty} x `}
               {row.description}

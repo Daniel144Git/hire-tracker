@@ -1,6 +1,6 @@
 import { setPaymentStatusAction } from "./actions";
 
-const buttonClass = "rounded border border-gray-500 px-2 py-0.5 text-sm font-medium";
+const buttonClass = "rounded border border-line-strong px-2 py-0.5 text-sm font-medium";
 
 /** The status changes that make sense from the current one. */
 export function PaymentButtons({

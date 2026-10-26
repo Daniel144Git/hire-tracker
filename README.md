@@ -167,6 +167,10 @@ Suppliers are kept apart wherever it matters (linking, checks, statements, query
 
 Every filter is a query parameter of the API too; an empty value means "all".
 
+## Dark mode
+
+The header has a **Theme** picker: System (the default, follows the computer's setting), Light or Dark, remembered in the browser. Colours are named tokens in `src/app/globals.css` with a light and a dark value, and a small script applies the theme before the page paints, so a dark page never flashes white. E2E tests scan every main page with axe in dark mode, which checks colour contrast too.
+
 ## Demo data
 
 `npm run db:reset` loads two suppliers. Summit Access Ltd (account HT014, 20% damage waiver, 30 days) has no data yet: it is there to read contract-layout invoices. Apex Plant Hire (account APX-000123) comes with 3 sites, 4 hire orders, 12 invoices from July to September 2026, a damage recorded on site and the 1 October statement. The data goes through the app's own services, and it deliberately contains supplier mistakes. An API test checks that every implemented rule finds at least one of them.

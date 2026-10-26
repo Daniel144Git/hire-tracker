@@ -44,10 +44,7 @@ async function StatementDetails({ params }: { params: Promise<{ id: string }> })
         {statement.hasFile && (
           <p>
             {/* An API route, not a page: a plain link opens the PDF in the browser. */}
-            <a
-              href={`/api/statements/${statement.id}/file`}
-              className="text-blue-700 underline dark:text-blue-400"
-            >
+            <a href={`/api/statements/${statement.id}/file`} className="text-link underline">
               Open the statement PDF
             </a>
           </p>
@@ -77,7 +74,7 @@ async function StatementDetails({ params }: { params: Promise<{ id: string }> })
           <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
             <caption className="sr-only">Problems</caption>
             <thead>
-              <tr className="border-b border-gray-400">
+              <tr className="border-b border-line-strong">
                 <th scope="col">Invoice</th>
                 <th scope="col">Problem</th>
                 <th scope="col">Severity</th>
@@ -94,7 +91,7 @@ async function StatementDetails({ params }: { params: Promise<{ id: string }> })
               {statement.problems.map((problem) => (
                 <tr
                   key={`${problem.kind}-${problem.lineId ?? problem.invoiceId}`}
-                  className="border-b border-gray-200 align-top"
+                  className="border-b border-line align-top"
                 >
                   <th scope="row" className="py-2 font-medium">
                     {problem.invoiceId ? (
@@ -126,7 +123,7 @@ async function StatementDetails({ params }: { params: Promise<{ id: string }> })
         <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
           <caption className="sr-only">Statement lines</caption>
           <thead>
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-line-strong">
               <th scope="col">Invoice</th>
               <th scope="col">Date</th>
               <th scope="col">Job no</th>
@@ -139,7 +136,7 @@ async function StatementDetails({ params }: { params: Promise<{ id: string }> })
           </thead>
           <tbody>
             {statement.lines.map((line) => (
-              <tr key={line.id} className="border-b border-gray-200">
+              <tr key={line.id} className="border-b border-line">
                 <th scope="row" className="py-2 font-medium">
                   {line.invoiceNo}
                 </th>

@@ -29,7 +29,7 @@ export default function AlertsPage({ searchParams }: PageProps<"/alerts">) {
   );
 }
 
-const inputClass = "w-28 rounded border border-gray-400 bg-background px-2 py-1";
+const inputClass = "w-28 rounded border border-line-strong bg-background px-2 py-1";
 
 async function Alerts({ searchParams }: { searchParams: PageProps<"/alerts">["searchParams"] }) {
   await connection();
@@ -101,7 +101,7 @@ async function Alerts({ searchParams }: { searchParams: PageProps<"/alerts">["se
         <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
           <caption className="sr-only">Alerts</caption>
           <thead>
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-line-strong">
               <th scope="col">Site</th>
               <th scope="col">Alert</th>
               <th scope="col">Job no</th>
@@ -113,10 +113,7 @@ async function Alerts({ searchParams }: { searchParams: PageProps<"/alerts">["se
           </thead>
           <tbody>
             {alerts.map((alert) => (
-              <tr
-                key={`${alert.kind}-${alert.itemId}`}
-                className="border-b border-gray-200 align-top"
-              >
+              <tr key={`${alert.kind}-${alert.itemId}`} className="border-b border-line align-top">
                 <th scope="row" className="py-2 font-medium">
                   <Link href={`/sites/${alert.site.id}`} className="underline">
                     {alert.site.code}

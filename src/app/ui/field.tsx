@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 
 const controlClass =
-  "rounded border border-gray-400 px-2 py-1 aria-[invalid=true]:border-red-700 bg-background";
+  "rounded border border-line-strong px-2 py-1 aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:border-red-400 bg-background";
 
 interface FieldProps {
   id: string;

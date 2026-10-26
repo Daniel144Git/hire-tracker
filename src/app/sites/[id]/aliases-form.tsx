@@ -28,7 +28,7 @@ export function AliasesForm({ siteId, aliases }: { siteId: string; aliases: stri
         defaultValue={state.values?.aliases ?? aliases.join("\n")}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "site-aliases-error" : undefined}
-        className="rounded border border-gray-400 bg-background px-2 py-1"
+        className="rounded border border-line-strong bg-background px-2 py-1"
       />
       {error && (
         <p id="site-aliases-error" className="text-sm text-red-700 dark:text-red-400">

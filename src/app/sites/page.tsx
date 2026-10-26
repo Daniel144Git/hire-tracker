@@ -34,7 +34,7 @@ async function SitesTable() {
     <table className="w-full border-collapse text-left [&_td]:px-2 [&_th]:px-2">
       <caption className="sr-only">Sites</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col" className="py-2">
             Code
           </th>
@@ -44,7 +44,7 @@ async function SitesTable() {
       </thead>
       <tbody>
         {sites.map((site) => (
-          <tr key={site.id} className="border-b border-gray-200">
+          <tr key={site.id} className="border-b border-line">
             <td className="py-2">
               <Link href={`/sites/${site.id}`} className="font-medium underline">
                 {site.code}
