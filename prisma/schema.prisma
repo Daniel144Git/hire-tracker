@@ -340,3 +340,17 @@ model ServiceEvent {
 
   @@index([siteId, date])
 }
+
+/// An invoice read from a PDF uploaded with others, waiting for a person to check it: the PDF
+/// is kept, and what was read fills the invoice form. Saving the invoice removes it.
+model InvoiceDraft {
+  id        String   @id @default(cuid())
+  /// The kept PDF (see invoice-files.ts).
+  uploadId  String   @unique
+  fileName  String
+  /// The invoice form's fields as read, as JSON.
+  values    String
+  /// What to check, as a JSON array of sentences.
+  warnings  String
+  createdAt DateTime @default(now())
+}

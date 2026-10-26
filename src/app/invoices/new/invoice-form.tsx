@@ -13,6 +13,8 @@ interface Props {
   initialValues?: Record<string, string>;
   /** The PDF the invoice was read from: kept with the invoice when it is saved. */
   uploadId?: string;
+  /** Fields to mark from the start, e.g. those the PDF did not give. */
+  initialErrors?: Record<string, string>;
 }
 
 /** How many line fieldsets the initial values fill: "lines.2.net" means three lines. */
@@ -23,12 +25,17 @@ function lineCountOf(values: Record<string, string>): number {
 
 const secondaryButtonClass = "rounded border border-gray-500 px-3 py-1 font-medium";
 
-export function InvoiceForm({ suppliers, initialValues = {}, uploadId }: Props) {
+export function InvoiceForm({
+  suppliers,
+  initialValues = {},
+  uploadId,
+  initialErrors = {},
+}: Props) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialFormState);
   // Each line has a stable key, so removing line 2 of 3 does not mix up the inputs of line 3.
   const [lineKeys, setLineKeys] = useState(() => [...Array(lineCountOf(initialValues)).keys()]);
   const [nextKey, setNextKey] = useState(lineKeys.length);
-  const errors = state.fieldErrors ?? {};
+  const errors = state.fieldErrors ?? initialErrors;
   const values = state.values ?? initialValues;
 
   if (suppliers.length === 0) return <p>Add a supplier first.</p>;

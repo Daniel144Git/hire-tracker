@@ -1,11 +1,18 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { readAllFields, toFormState, type FormState } from "@/server/form-state";
 import { toFormValues } from "@/lib/extraction/form-values";
+import { missingFieldErrors } from "@/lib/extraction/review";
 import { ValidationError } from "@/server/errors";
 import { extractInvoiceFromPdf } from "@/server/services/extraction";
 import { createInvoice } from "@/server/services/invoices";
+import {
+  discardInvoiceDraft,
+  importInvoicePdf,
+  type ImportResult,
+} from "@/server/services/invoice-import";
 import type { ExtractionState } from "./new/extraction-state";
 
 const NUMBER_FIELDS = new Set(["qty", "weeks", "days", "rate", "net", "vat"]);
@@ -61,11 +68,13 @@ export async function extractInvoiceAction(
   }
   try {
     const result = await extractInvoiceFromPdf(new Uint8Array(await file.arrayBuffer()));
+    const values = result.invoice ? toFormValues(result.invoice, result.supplier?.id ?? null) : {};
     const extraction = {
       uploadId: result.uploadId,
       fileName: file.name,
-      values: result.invoice ? toFormValues(result.invoice, result.supplier?.id ?? null) : {},
+      values,
       warnings: result.warnings,
+      missing: missingFieldErrors(values),
     };
     if (!result.invoice) {
       return {
@@ -84,4 +93,32 @@ export async function extractInvoiceAction(
     if (error instanceof ValidationError) return { status: "error", message: error.message };
     throw error;
   }
+}
+
+export type BatchFileResult =
+  ImportResult | { fileName: string; status: "NOT_READ"; message: string };
+
+/**
+ * One PDF of a batch upload: the page sends the files one at a time, so each request stays
+ * small and the person sees the progress.
+ */
+export async function importInvoiceFileAction(formData: FormData): Promise<BatchFileResult> {
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { fileName: "?", status: "NOT_READ", message: "No file" };
+  }
+  try {
+    return await importInvoicePdf(new Uint8Array(await file.arrayBuffer()), file.name);
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return { fileName: file.name, status: "NOT_READ", message: error.message };
+    }
+    throw error;
+  }
+}
+
+/** Removes an invoice from the "To check" list without saving it. */
+export async function discardDraftAction(formData: FormData): Promise<void> {
+  await discardInvoiceDraft(String(formData.get("draftId") ?? ""));
+  refresh();
 }

@@ -3,20 +3,22 @@
 import { useActionState } from "react";
 import { buttonClass, FormMessage } from "@/app/ui/field";
 import { extractInvoiceAction } from "../actions";
-import { initialExtractionState } from "./extraction-state";
+import { initialExtractionState, type ExtractionState } from "./extraction-state";
 import { InvoiceForm } from "./invoice-form";
 
 interface Props {
   suppliers: { id: string; name: string }[];
+  /** An invoice from a batch upload, waiting to be checked: the form opens with it. */
+  draft?: NonNullable<ExtractionState["extraction"]>;
 }
 
 /**
  * Read an invoice PDF to fill in the form, or type the invoice in. Either way the person checks
  * the form and saves it: what was read from the PDF is never saved without being seen.
  */
-export function NewInvoice({ suppliers }: Props) {
+export function NewInvoice({ suppliers, draft }: Props) {
   const [state, action, pending] = useActionState(extractInvoiceAction, initialExtractionState);
-  const extraction = state.extraction;
+  const extraction = state.extraction ?? draft;
 
   return (
     <>
@@ -42,6 +44,11 @@ export function NewInvoice({ suppliers }: Props) {
           </button>
         </form>
         <FormMessage status={state.status} message={state.message} />
+        {draft && !state.extraction && (
+          <p role="status">
+            Checking {draft.fileName}: fill in the marked fields and check the rest, then save.
+          </p>
+        )}
         {extraction && extraction.warnings.length > 0 && (
           <div
             role="region"
@@ -70,6 +77,7 @@ export function NewInvoice({ suppliers }: Props) {
           suppliers={suppliers}
           initialValues={extraction?.values}
           uploadId={extraction?.uploadId}
+          initialErrors={extraction?.missing}
         />
       </section>
     </>

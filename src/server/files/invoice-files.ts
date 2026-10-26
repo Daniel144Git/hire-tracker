@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NotFoundError, ValidationError } from "@/server/errors";
 
@@ -61,6 +61,11 @@ export async function assertUploadExists(uploadId: string): Promise<void> {
       { path: ["uploadId"], message: "Unknown upload" },
     ]);
   }
+}
+
+/** Deletes an upload that will not be saved, e.g. a discarded invoice to check. */
+export async function deleteUpload(uploadId: string): Promise<void> {
+  await rm(uploadPath(uploadId), { force: true });
 }
 
 /** Moves an upload to the invoice it was saved as. Returns the path to store on the invoice. */
