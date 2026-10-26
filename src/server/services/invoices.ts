@@ -212,6 +212,8 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
   if (uploadId) {
     const filePath = await keepUploadWithInvoice(uploadId, invoice.id);
     await db.invoice.update({ where: { id: invoice.id }, data: { filePath } });
+    // An invoice that was waiting to be checked is done.
+    await db.invoiceDraft.deleteMany({ where: { uploadId } });
   }
 
   // Check the new invoice, then the other invoices of the same orders and job: a credit note
