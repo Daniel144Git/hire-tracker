@@ -13,7 +13,7 @@ import { listSuppliers } from "@/server/services/suppliers";
 export const metadata: Metadata = { title: "Yearly totals" };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const linkClass = "text-blue-700 underline dark:text-blue-400";
+const linkClass = "text-link underline";
 
 export default function YearlyPage({ searchParams }: PageProps<"/reports/yearly">) {
   return (
@@ -58,7 +58,7 @@ async function Report({
             min={2000}
             max={9999}
             defaultValue={requested}
-            className="w-28 rounded border border-gray-400 bg-background px-2 py-1"
+            className="w-28 rounded border border-line-strong bg-background px-2 py-1"
           />
         </div>
         <FilterSelect
@@ -111,7 +111,7 @@ function Totals({ report, filters }: { report: YearlyTotals; filters: Record<str
         <table className="w-full border-collapse text-left text-sm [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
           <caption className="text-left">Gross cost by site and month, {report.year}</caption>
           <thead>
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-line-strong">
               <th scope="col">Site</th>
               {MONTHS.map((month) => (
                 <th key={month} scope="col" className="text-right">
@@ -125,7 +125,7 @@ function Totals({ report, filters }: { report: YearlyTotals; filters: Record<str
           </thead>
           <tbody>
             {report.sites.map((row) => (
-              <tr key={row.site?.id ?? "none"} className="border-b border-gray-200">
+              <tr key={row.site?.id ?? "none"} className="border-b border-line">
                 <th scope="row" className="py-2 font-medium whitespace-nowrap">
                   {row.site ? row.site.code : "No site"}
                 </th>

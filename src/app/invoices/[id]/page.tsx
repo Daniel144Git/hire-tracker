@@ -63,10 +63,7 @@ async function InvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
       {invoice.hasFile && (
         <p>
           {/* An API route, not a page: a plain link opens the PDF in the browser. */}
-          <a
-            href={`/api/invoices/${invoice.id}/file`}
-            className="text-blue-700 underline dark:text-blue-400"
-          >
+          <a href={`/api/invoices/${invoice.id}/file`} className="text-link underline">
             Open the invoice PDF
           </a>
         </p>
@@ -122,7 +119,7 @@ function LinesTable({ lines }: { lines: InvoiceDto["lines"] }) {
     <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">Invoice lines</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">Line</th>
           <th scope="col">Description</th>
           <th scope="col">Type</th>
@@ -139,7 +136,7 @@ function LinesTable({ lines }: { lines: InvoiceDto["lines"] }) {
       </thead>
       <tbody>
         {lines.map((line) => (
-          <tr key={line.id} className="border-b border-gray-200 align-top">
+          <tr key={line.id} className="border-b border-line align-top">
             <th scope="row" className="py-2">
               {line.position}
             </th>
@@ -215,7 +212,7 @@ function FindingsTable({ findings }: { findings: FindingRow[] }) {
     <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">Findings</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">Check</th>
           <th scope="col">Severity</th>
           <th scope="col">Line</th>
@@ -234,7 +231,7 @@ function FindingsTable({ findings }: { findings: FindingRow[] }) {
       </thead>
       <tbody>
         {findings.map((finding) => (
-          <tr key={finding.id} className="border-b border-gray-200 align-top">
+          <tr key={finding.id} className="border-b border-line align-top">
             <th scope="row" className="py-2 font-medium whitespace-nowrap">
               {finding.check} <span className="font-normal">{CHECK_LABEL[finding.check]}</span>
             </th>

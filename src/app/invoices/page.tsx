@@ -23,7 +23,7 @@ export default function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
           </Suspense>
           <Link
             href="/invoices/upload"
-            className="rounded border border-gray-500 px-3 py-1 font-medium"
+            className="rounded border border-line-strong px-3 py-1 font-medium"
           >
             Upload invoices
           </Link>
@@ -98,7 +98,7 @@ async function InvoicesTable({
             name="month"
             type="month"
             defaultValue={filters.month}
-            className="rounded border border-gray-400 bg-background px-2 py-1"
+            className="rounded border border-line-strong bg-background px-2 py-1"
           />
         </div>
         <FilterSelect
@@ -146,7 +146,7 @@ function InvoiceList({ invoices }: { invoices: Awaited<ReturnType<typeof listInv
     <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">Invoices</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">Number</th>
           <th scope="col">Supplier</th>
           <th scope="col">Date</th>
@@ -162,7 +162,7 @@ function InvoiceList({ invoices }: { invoices: Awaited<ReturnType<typeof listInv
       </thead>
       <tbody>
         {invoices.map((invoice) => (
-          <tr key={invoice.id} className="border-b border-gray-200">
+          <tr key={invoice.id} className="border-b border-line">
             <th scope="row" className="py-2 font-medium">
               <Link href={`/invoices/${invoice.id}`} className="underline">
                 {invoice.number}

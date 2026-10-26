@@ -21,7 +21,7 @@ const TRADE_LABEL: Record<TradeKey, string> = {
   UNASSIGNED: "No trade",
 };
 
-const linkClass = "text-blue-700 underline dark:text-blue-400";
+const linkClass = "text-link underline";
 
 export default function CostsPage({ searchParams }: PageProps<"/reports/costs">) {
   return (
@@ -64,7 +64,7 @@ async function Report({
             name="month"
             type="month"
             defaultValue={requested}
-            className="rounded border border-gray-400 bg-background px-2 py-1"
+            className="rounded border border-line-strong bg-background px-2 py-1"
           />
         </div>
         <FilterSelect
@@ -132,7 +132,7 @@ function Costs({
       <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
         <caption className="text-left text-sm">Net cost by site and trade, {month}</caption>
         <thead>
-          <tr className="border-b border-gray-400">
+          <tr className="border-b border-line-strong">
             <th scope="col">Site</th>
             {report.trades.map((trade) => (
               <th key={trade} scope="col" className="text-right">
@@ -149,7 +149,7 @@ function Costs({
         </thead>
         <tbody>
           {report.sites.map((row) => (
-            <tr key={row.site?.id ?? "none"} className="border-b border-gray-200">
+            <tr key={row.site?.id ?? "none"} className="border-b border-line">
               <th scope="row" className="py-2 font-medium">
                 {row.site ? `${row.site.code} - ${row.site.name}` : "No site"}
               </th>
@@ -190,14 +190,14 @@ function Costs({
         {report.sites.map((row) => {
           const name = row.site ? `${row.site.code} - ${row.site.name}` : "No site";
           return (
-            <details key={row.site?.id ?? "none"} className="rounded border border-gray-300 p-2">
+            <details key={row.site?.id ?? "none"} className="rounded border border-line p-2">
               <summary className="cursor-pointer font-medium">
                 {name}: {row.lines.length} {row.lines.length === 1 ? "line" : "lines"}
               </summary>
               <table className="mt-2 w-full border-collapse text-left text-sm [&_td]:px-2 [&_td]:py-1 [&_th]:px-2">
                 <caption className="sr-only">Lines of {name}</caption>
                 <thead>
-                  <tr className="border-b border-gray-400">
+                  <tr className="border-b border-line-strong">
                     <th scope="col">Invoice</th>
                     <th scope="col">Trade</th>
                     <th scope="col">Description</th>
@@ -211,7 +211,7 @@ function Costs({
                 </thead>
                 <tbody>
                   {row.lines.map((line, index) => (
-                    <tr key={`${line.invoiceId}-${index}`} className="border-b border-gray-200">
+                    <tr key={`${line.invoiceId}-${index}`} className="border-b border-line">
                       <th scope="row" className="font-normal">
                         <Link href={`/invoices/${line.invoiceId}`} className="underline">
                           {line.invoiceNumber}

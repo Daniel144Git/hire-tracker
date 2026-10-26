@@ -23,7 +23,7 @@ function lineCountOf(values: Record<string, string>): number {
   return Math.max(0, ...indexes.filter((index) => index !== undefined).map(Number)) + 1;
 }
 
-const secondaryButtonClass = "rounded border border-gray-500 px-3 py-1 font-medium";
+const secondaryButtonClass = "rounded border border-line-strong px-3 py-1 font-medium";
 
 export function InvoiceForm({
   suppliers,
@@ -106,7 +106,7 @@ export function InvoiceForm({
       </fieldset>
 
       {lineKeys.map((key, index) => (
-        <fieldset key={key} className="grid gap-3 border-t border-gray-300 pt-4 sm:grid-cols-4">
+        <fieldset key={key} className="grid gap-3 border-t border-line pt-4 sm:grid-cols-4">
           <legend className="mb-2 font-medium">Line {index + 1}</legend>
           {field(`lines.${index}.description`, "Description")}
           {field(`lines.${index}.fleetCode`, "Fleet code")}

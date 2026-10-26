@@ -54,7 +54,7 @@ async function DuePayments() {
         <table className="w-full max-w-md border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
           <caption className="sr-only">To pay by site</caption>
           <thead>
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-line-strong">
               <th scope="col">Site</th>
               <th scope="col" className="text-right">
                 To pay
@@ -66,7 +66,7 @@ async function DuePayments() {
           </thead>
           <tbody>
             {due.bySite.map((site) => (
-              <tr key={site.siteCode} className="border-b border-gray-200">
+              <tr key={site.siteCode} className="border-b border-line">
                 <th scope="row" className="py-2 font-medium">
                   {site.siteCode}
                 </th>
@@ -86,7 +86,7 @@ function DueTable({ title, invoices }: { title: string; invoices: DueInvoice[] }
     <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">{title}</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">Invoice</th>
           <th scope="col">Supplier</th>
           <th scope="col">Site</th>
@@ -100,7 +100,7 @@ function DueTable({ title, invoices }: { title: string; invoices: DueInvoice[] }
       </thead>
       <tbody>
         {invoices.map((invoice) => (
-          <tr key={invoice.id} className="border-b border-gray-200">
+          <tr key={invoice.id} className="border-b border-line">
             <th scope="row" className="py-2 font-medium">
               <Link href={`/invoices/${invoice.id}`} className="underline">
                 {invoice.number}

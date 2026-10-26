@@ -71,7 +71,7 @@ export function BulkUpload() {
         <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
           <caption className="sr-only">Uploaded files</caption>
           <thead>
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-line-strong">
               <th scope="col">File</th>
               <th scope="col">Result</th>
               <th scope="col">Details</th>
@@ -79,10 +79,7 @@ export function BulkUpload() {
           </thead>
           <tbody>
             {results.map((result, index) => (
-              <tr
-                key={`${result.fileName}-${index}`}
-                className="border-b border-gray-200 align-top"
-              >
+              <tr key={`${result.fileName}-${index}`} className="border-b border-line align-top">
                 <th scope="row" className="py-2 font-normal">
                   {result.fileName}
                 </th>

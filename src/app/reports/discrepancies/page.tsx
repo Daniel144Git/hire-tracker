@@ -49,7 +49,7 @@ async function Report({
             name="month"
             type="month"
             defaultValue={requested}
-            className="rounded border border-gray-400 bg-background px-2 py-1"
+            className="rounded border border-line-strong bg-background px-2 py-1"
           />
         </div>
         <FilterSelect
@@ -129,7 +129,7 @@ async function ReportContent({
           <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
             <caption className="sr-only">Findings of the month</caption>
             <thead>
-              <tr className="border-b border-gray-400">
+              <tr className="border-b border-line-strong">
                 <th scope="col">Invoice</th>
                 <th scope="col">Site</th>
                 <th scope="col">Job</th>
@@ -144,7 +144,7 @@ async function ReportContent({
             </thead>
             <tbody>
               {report.findings.map((finding) => (
-                <tr key={finding.id} className="border-b border-gray-200 align-top">
+                <tr key={finding.id} className="border-b border-line align-top">
                   <th scope="row" className="py-2 font-medium whitespace-nowrap">
                     <Link href={`/invoices/${finding.invoice.id}`} className="underline">
                       {finding.invoice.number}
@@ -176,7 +176,7 @@ async function ReportContent({
           <table className="w-full border-collapse text-left [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
             <caption className="sr-only">Orders on hire with no invoice</caption>
             <thead>
-              <tr className="border-b border-gray-400">
+              <tr className="border-b border-line-strong">
                 <th scope="col">Job</th>
                 <th scope="col">Site</th>
                 <th scope="col">On hire</th>
@@ -185,7 +185,7 @@ async function ReportContent({
             </thead>
             <tbody>
               {report.missingPeriods.map((gap) => (
-                <tr key={gap.orderId} className="border-b border-gray-200">
+                <tr key={gap.orderId} className="border-b border-line">
                   <th scope="row" className="py-2 font-medium">
                     {gap.supplierJobNo}
                   </th>

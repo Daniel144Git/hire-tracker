@@ -1,20 +1,48 @@
 @import "tailwindcss";
 
+/* Dark mode follows the theme chosen in the header (System, Light, Dark), set as data-theme on
+   <html> before the page paints; "dark:" classes use it instead of the system setting alone. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
+  /* Table rows and quiet separators. */
+  --line: #e5e7eb;
+  /* Table headings, inputs and outlined buttons. */
+  --line-strong: #9ca3af;
+  --link: #1d4ed8;
+}
+
+/* Without JavaScript the page still follows the system. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --line: #2a2a2a;
+    --line-strong: #6b7280;
+    --link: #60a5fa;
+  }
+}
+
+:root[data-theme="dark"] {
+  /* Native controls (date pickers, selects, scrollbars) turn dark too. */
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --line: #2a2a2a;
+  --line-strong: #6b7280;
+  --link: #60a5fa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-link: var(--link);
 }
 
 body {

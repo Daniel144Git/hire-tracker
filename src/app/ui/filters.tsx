@@ -1,4 +1,4 @@
-const selectClass = "rounded border border-gray-400 bg-background px-2 py-1";
+const selectClass = "rounded border border-line-strong bg-background px-2 py-1";
 
 /** A labelled select for a GET filter form: the first option, "All …", means no filter. */
 export function FilterSelect({

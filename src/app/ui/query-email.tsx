@@ -22,7 +22,7 @@ export function QueryEmail({
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
   return (
-    <details className="rounded border border-gray-300 p-3">
+    <details className="rounded border border-line p-3">
       <summary className="cursor-pointer font-medium">{title}</summary>
       <div className="mt-3 flex flex-col gap-3">
         <div className="flex flex-col gap-1">
@@ -33,7 +33,7 @@ export function QueryEmail({
             id={`${id}-subject`}
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
-            className="rounded border border-gray-400 bg-background px-2 py-1"
+            className="rounded border border-line-strong bg-background px-2 py-1"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -45,13 +45,13 @@ export function QueryEmail({
             value={body}
             onChange={(event) => setBody(event.target.value)}
             rows={Math.min(20, body.split("\n").length + 1)}
-            className="rounded border border-gray-400 bg-background px-2 py-1 font-mono text-sm"
+            className="rounded border border-line-strong bg-background px-2 py-1 font-mono text-sm"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className="rounded border border-gray-500 px-3 py-1 font-medium"
+            className="rounded border border-line-strong px-3 py-1 font-medium"
             onClick={async () => {
               await navigator.clipboard.writeText(`${subject}\n\n${body}`);
               setCopied(true);
@@ -59,7 +59,7 @@ export function QueryEmail({
           >
             Copy
           </button>
-          <a href={mailto} className="text-blue-700 underline dark:text-blue-400">
+          <a href={mailto} className="text-link underline">
             Open in your email app
           </a>
           {copied && (

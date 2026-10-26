@@ -34,7 +34,7 @@ async function Drafts() {
     <table className="w-full border-collapse text-left align-top [&_td]:px-2 [&_td]:py-2 [&_th]:px-2">
       <caption className="sr-only">Invoices to check</caption>
       <thead>
-        <tr className="border-b border-gray-400">
+        <tr className="border-b border-line-strong">
           <th scope="col">File</th>
           <th scope="col">Read as</th>
           <th scope="col">What to check</th>
@@ -43,7 +43,7 @@ async function Drafts() {
       </thead>
       <tbody>
         {drafts.map((draft) => (
-          <tr key={draft.id} className="border-b border-gray-200 align-top">
+          <tr key={draft.id} className="border-b border-line align-top">
             <th scope="row" className="py-2 font-normal">
               {draft.fileName}
             </th>
