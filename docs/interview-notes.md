@@ -154,3 +154,10 @@ What I can explain about this project, phase by phase.
 - **Small requests, visible progress.** The page sends the files one at a time instead of one large upload, so no request hits the size limit and the person sees "Reading 12 of 40".
 - **One rule, two entry points.** A batch invoice is saved through the same service as one typed in, so it gets the same linking, site and checks; saving any invoice with a kept PDF clears its draft.
 - **Tried on real data in a copy.** With one month's invoices removed from a copy of the local database, uploading the real folder saved all 40 in 2 seconds, and the month matched the spreadsheet and the statements to the penny. The real database was not touched.
+
+## Dark mode
+
+- **Tokens, not one-off classes.** Fixed colours (60 grey borders, the link blue) became named tokens with a light and a dark value, so the theme is one place in the CSS, not a `dark:` class on every element.
+- **No flash.** The chosen theme is applied by a tiny inline script in `<head>` before the page paints; `suppressHydrationWarning` on `<html>` says the attribute differs from the server on purpose.
+- **External state the React way.** The stored choice is read with `useSyncExternalStore`, which also follows a change made in another tab; the lint rule against setting state inside an effect pointed there.
+- **Accessibility in both themes.** Every main page is scanned with axe in dark mode as well, and axe checks colour contrast, so a dark text on a dark background fails the build.
