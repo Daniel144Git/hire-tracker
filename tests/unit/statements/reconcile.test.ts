@@ -137,8 +137,8 @@ describe("reconcileStatement (R11): the supplier's statement against our invoice
   });
 
   it("matches invoice numbers whatever their case or spaces", () => {
-    const result = reconcileStatement(statement([{ invoiceNo: " REDACTED ", amount: 10 }]), [
-      invoice({ number: "REDACTED", gross: 10 }),
+    const result = reconcileStatement(statement([{ invoiceNo: " apx-29999 ", amount: 10 }]), [
+      invoice({ number: "APX-29999", gross: 10 }),
     ]);
 
     expect(result.problems).toEqual([]);

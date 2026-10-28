@@ -31,7 +31,7 @@ playwright/.cache/
 *.pem
 .vercel
 
-# Florin's personal study notes (Romanian, local only)
+# Personal study notes (local only)
 docs/explicatii.md
 
 # Prisma generated client

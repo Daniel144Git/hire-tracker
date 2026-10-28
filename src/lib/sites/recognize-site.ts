@@ -47,7 +47,7 @@ export function recognizeSite(
   const ref = normaliseReference(printed.customerRef ?? "");
   const words = ref.split(" ").filter(Boolean);
   const postcode = postcodeOf(printed.deliveryAddress);
-  // Each address line, padded so a phrase only matches whole words: " REDACTED 2 6 REDACTED WAY ".
+  // Each address line, padded so a phrase only matches whole words: " RIVERSIDE TOWER 1 RIVER ROAD ".
   const addressLines = (printed.deliveryAddress ?? "")
     .split(",")
     .map((line) => ` ${normaliseReference(line)} `);
