@@ -135,7 +135,7 @@ Tolerance for R5/R6/R12 is configurable (default £0.05). R15 is the heart of th
 
 ### 4.2a Due dates and payment tracking
 
-Every invoice has a due date (the supplier prints it; default 30 days from the invoice date). The app tracks `paymentStatus` (`UNPAID`, `PAID`, `QUERIED`, `CREDITED`) and shows what is due in the next 7 / 14 days and what is overdue, per supplier and per site. The monthly statement and the outstanding spreadsheet are imported (CSV/XLSX) to run R11 and to update what the supplier still considers unpaid. This replaces the manual upload into the team's task board; a later phase can push items to Monday.com through an interface.
+Every invoice has a due date (the supplier prints it; default 30 days from the invoice date). The app tracks `paymentStatus` (`UNPAID`, `PAID`, `QUERIED`, `CREDITED`) and shows what is due in the next 7 / 14 days and what is overdue, per supplier and per site. The supplier's monthly statement is imported from its PDF to run R11 and to mark paid what the supplier no longer lists. This replaces the manual upload into the team's task board; a later phase can push items to Monday.com through an interface.
 
 ### 4.3 VAT and rounding
 
