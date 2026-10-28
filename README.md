@@ -301,6 +301,6 @@ Environment variables are documented in `.env.example`. Copy it to `.env` for lo
 
 ## Status
 
-Phases 0 to 7 are done: the charge calculator, sites and orders, invoices, the reconciliation checks R1 to R17, reading invoice PDFs, supplier statements, cost reports with exports, damage on site, query emails and alerts. All data in this repository is fictional.
+Phases 0 to 7 and 9 are done: the charge calculator, sites and orders, invoices, the reconciliation checks R1 to R17, reading invoice PDFs, supplier statements, cost reports with exports, damage on site, query emails and alerts, and this documentation. Phase 8 (a Java RestAssured module, Postgres in CI) is optional. All data in this repository is fictional.
 
 [Contributing](CONTRIBUTING.md) · [MIT licence](LICENSE)
