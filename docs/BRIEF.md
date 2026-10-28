@@ -45,7 +45,7 @@ The project is inspired by real procurement work, but **all data in this repo is
 ### Later (phases 5-8)
 
 8. Upload invoice PDF, read it into the invoice form (one template per supplier layout; AI only as a later fallback), review screen. Statement import and R11.
-9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export. The monthly export also groups the invoice PDFs by site: a ZIP with one folder per site (e.g. `RVS - Riverside Tower/`), each holding that site's invoices and a CSV summary (requested by Florin; Google Drive folders are an option if the connector is set up).
+9. Monthly cost allocation per site and trade, yearly totals per site (the current spreadsheet's report tabs), CSV/Excel export. The monthly export also groups the invoice PDFs by site: a ZIP with one folder per site (e.g. `RVS - Riverside Tower/`), each holding that site's invoices and a CSV summary (Google Drive folders are an option later).
 10. Service events and the "service billed but not recorded" check.
 11. Draft a query email to the hire company from the discrepancy report.
 12. Alerts: item on hire longer than N days, cost to date above a threshold (time to off-hire or buy).
@@ -149,7 +149,7 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - Monthly report: site × trade, net and gross, plus the list of lines behind each cell.
 - Yearly report: per site per month.
 
-### 4.5 Notes from Florin for phase 5 (confirmed)
+### 4.5 Domain notes for phase 5 (confirmed)
 
 - **Our own order number** (the spreadsheet's "order number" column) is the key from an invoice to a hire order when the supplier prints it. `HireOrder.orderRef` holds it, and line linking uses it before the supplier's job number. _Correction after reading the real invoices in 5b:_ the contract-layout supplier prints it as "Order No"; on the despatch-layout supplier's invoices "Our Ref" is the supplier's own job number (the same number as "Job No." on its statements), so those invoices link by job number.
 - **E-codes are fleet codes**: the code of the physical item, the same code the spreadsheet holds. An E-code can change from one monthly continuation invoice to the next, when the item is swapped or the product changes. The app records each change of code on an item (old code, new code, date), keeps linking invoice lines with the old code to the item, and R15 reports a code gone plus a code new on the same order as one possible swap to confirm, not as two unrelated findings.
@@ -166,14 +166,14 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 
 **Implemented in Phase 5b:**
 
-- **Templates, not AI.** There are two equipment suppliers and both send PDFs with text, so each layout has a template (`src/lib/extraction`): deterministic, tested without mocks, no API key, no cost. Decided with Florin. A third supplier gets a template, or an AI reader as a fallback behind the same `extractInvoice` result.
+- **Templates, not AI.** There are two equipment suppliers and both send PDFs with text, so each layout has a template (`src/lib/extraction`): deterministic, tested without mocks, no API key, no cost. A third supplier gets a template, or an AI reader as a fallback behind the same `extractInvoice` result.
 - **Reading a PDF.** `readPdfText` (unpdf, the PDF.js engine) returns text pieces with their position. `groupIntoLines` rebuilds rows (pieces within 3 points of height) and columns (a gap of 3 points or more starts a cell). Templates read values by label and column. Real column gaps are as small as 4 points, which set the threshold.
 - **Despatch layout:** "Our Ref" = job number, "Your Ref" = customer reference, "Account" = our account number (finds the supplier), items "N x description", the period, "W wks D days", rate per week, total and VAT code, the fleet code on the "Ecode:" row below. A row with only an amount under an item is a sub-line of that item: the suspension credit ("Free days ... 121.28-") becomes a negative hire line with the item's fleet code, which is what R16 looks for. "Workshop" invoices (damage charges) are SALE invoices with OTHER lines, VAT code O at 0%.
 - **Contract layout:** "Order No" = our order number, "Contract No." = job number, the account code at the start of that row, the site block as the delivery address. One block per item; the fleet code is in brackets in the description and the charge reads "£72.00 per week for 4 weeks 3 days"; "previous invoice no." gives the last invoice. All items off hired makes it a return invoice.
 - **Credit notes** (both layouts) are stored with negative amounts, the period as printed.
 - **Nothing guessed, nothing saved unseen.** Missing fields are left empty with a warning; lines that do not add up to the net, or VAT more than half a penny per line away from the VAT printed, are reported. The form opens filled in and is saved only when the person saves it. The PDF is kept with the invoice (`Invoice.filePath`, under `INVOICE_FILES_DIR`).
 - **Checked on the real documents, locally:** 269 distinct invoices (261 despatch, 8 contract) read with no warnings. Three things found on real data were fixed test-first with fictional reproductions: VAT rounded on the total (R10), suspension credit rows, and a site block broken by our own address printed at other heights.
-- **Tried in the app with real invoices, locally:** four real invoices (REDACTED continuation with a suspension credit, REDACTED return, Star invoice, Star credit note) uploaded through the screen, read with no warnings, supplier found by account number, saved with the PDF. This found two more things, fixed test-first: R8 no longer flags a credit line (it costs nothing), and the site is also recognised from a spelling or name in the delivery address.
+- **Tried in the app with real invoices, locally:** four real invoices (a continuation with a suspension credit and a return from one supplier, an invoice and a credit note from the other) uploaded through the screen, read with no warnings, supplier found by account number, saved with the PDF. This found two more things, fixed test-first: R8 no longer flags a credit line (it costs nothing), and the site is also recognised from a spelling or name in the delivery address.
 - **Trades:** DUCT added (MECH, ELEC, VENT, DUCT, BMS), as on the cost allocation sheet.
 
 **Implemented in Phase 5c:**
@@ -189,13 +189,13 @@ Every invoice has a due date (the supplier prints it; default 30 days from the i
 - **Month of an invoice:** the month of its date, as on the real cost allocation tabs (invoices dated 28 February are in FEB).
 - **Trade of a line:** the line's own trade, else its order's; otherwise "No trade" (UNASSIGNED). An invoice with no site is shown as "No site". Nothing is guessed.
 - **Reports add up to the invoices:** `linesWithInvoiceVat` spreads the penny difference of VAT rounded once on the total over the largest lines, so per-site and per-trade totals add up to the printed invoices (4.3). Sums are kept in pence.
-- **Exports:** CSV (every line), Excel written directly as a minimal .xlsx (a ZIP of XML, numbers as numbers, no library beyond `fflate`), and the ZIP of invoice PDFs with one folder per site and a summary CSV in each (Florin's request). Text that a spreadsheet could run as a formula is written as text.
-- **Checked locally on the real August invoices:** 40 invoices, £REDACTED gross, the ZIP with one folder per site and every PDF in it.
-- **Final acceptance with the real documents (local only),** after importing the 62 real orders: every one of the seven statements matches the invoices (only the 22 January invoices missing, which add up exactly to the spreadsheet's January total, £REDACTED); every one of the 260 invoices in the per-site folders has the same site in the app; and the app's monthly totals by site match the spreadsheet's "Total 2026" tab to the penny, net and gross, for every month from February to September.
+- **Exports:** CSV (every line), Excel written directly as a minimal .xlsx (a ZIP of XML, numbers as numbers, no library beyond `fflate`), and the ZIP of invoice PDFs with one folder per site and a summary CSV in each. Text that a spreadsheet could run as a formula is written as text.
+- **Checked locally on the real August invoices:** a month's invoices, the ZIP with one folder per site and every PDF in it.
+- **Final acceptance with the real documents (local only),** after importing the 62 real orders: every one of the seven statements matches the invoices (only the 22 January invoices missing, which add up exactly to the spreadsheet's January total); every one of the 260 invoices in the per-site folders has the same site in the app; and the app's monthly totals by site match the spreadsheet's "Total 2026" tab to the penny, net and gross, for every month from February to September.
 
 **Implemented in Phase 7:**
 
-- **R9 on real charges.** The real invoices have no service visits, but they do charge for lost and damaged parts (workshop invoices, "REDACTED", press collars, a gauge). A site event (`ServiceEvent`: service, inspection, repair, damage, loss) is what justifies such a charge; R9 looks for one on the same site from 60 days before the invoice to 7 days after. Locally, R9 found eight such charges on the real invoices, about £REDACTED, none confirmed on site.
+- **R9 on real charges.** The real invoices have no service visits, but they do charge for lost and damaged parts (workshop invoices for damaged or missing parts). A site event (`ServiceEvent`: service, inspection, repair, damage, loss) is what justifies such a charge; R9 looks for one on the same site from 60 days before the invoice to 7 days after. Locally, R9 found several such charges on the real invoices, none confirmed on site.
 - **Query emails** are a pure function of the open findings: high and medium only, without gaps in our own records (a job or order number we have no order for, an unknown site), with the overcharge of each and the total. The app drafts; the person edits and sends from their own email (a `mailto:` link), so the app never sends anything.
 - **Alerts** come from the on-hire register of every site: long hires (84 days), costly hires (£1,000 so far) and off-hired items not collected after 7 days, with the limits as query parameters.
 
@@ -290,7 +290,7 @@ Principles:
 
 ## 8. Phases
 
-Each phase ends with: a demo, CI green, a merged PR, interview notes for Florin.
+Each phase ends with: a demo, CI green, a merged PR, design notes in `docs/DESIGN-NOTES.md`.
 
 0. **Setup.** Next.js + TS, ESLint/Prettier, Vitest, Playwright, GitHub Actions running a first unit, API and E2E test. `.env.example`, README skeleton.
 1. **Charge calculator (TDD).** Working days in a period, weeks + extra days, line charge rounding, damage waiver, the worked examples in 4.1, month boundaries, leap year, bank-holiday flag.
@@ -301,7 +301,7 @@ Each phase ends with: a demo, CI green, a merged PR, interview notes for Florin.
 6. **Reports.** Monthly allocation site × trade, yearly totals, CSV/Excel export.
 7. **Service events + extras.** R9, query email draft, long-hire and cost alerts.
 8. **Optional.** Java RestAssured module, Postgres in CI, roles, Monday.com sync.
-9. **Polish.** README with architecture diagram, test strategy, screenshots/GIF, how to run, CI badges. Florin adds the project to his CV and LinkedIn.
+9. **Polish.** README with architecture diagram, test strategy, screenshots/GIF, how to run, CI badges. The repository goes public.
 
 ## 9. Using it for real
 

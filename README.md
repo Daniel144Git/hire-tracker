@@ -1,10 +1,59 @@
 # Hire Tracker
 
-Tracks equipment hired for construction sites and checks every hire invoice against what was actually on site: items, periods, rates, returns, credits and the supplier's statements.
+Checks every equipment-hire invoice against what was actually on site, and flags the overcharges: billed after off-hire, wrong rates, double billing, missing credits, statements that do not match.
 
-Built as a test-automation portfolio project: the application is real, the test suite is the showcase (Vitest unit tests, Playwright API and E2E tests with Page Object Model, GitHub Actions CI with published reports).
+[![CI](https://github.com/Daniel144Git/hire-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Daniel144Git/hire-tracker/actions/workflows/ci.yml)
+![Playwright](https://img.shields.io/badge/Playwright-1.64-2EAD33?logo=playwright&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-421_tests-6E9F18?logo=vitest&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 
-- `docs/BRIEF.md` — what the app does, the business rules, the test strategy and the phases.
+## Why this project
+
+- **A real procurement problem.** Construction sites hire lifts, generators and tools by the week, and the invoices are checked by hand against a spreadsheet. Hire billed after the item went back, a rate that drifts, a credit that never comes: each one is small, and they add up. This app replaces that spreadsheet.
+- **17 reconciliation rules.** Every invoice is checked as soon as it is saved, and again when anything it depends on changes: off-hire dates, credit notes, site suspensions, damage recorded on site, the supplier's monthly statement. Each rule is a pure, unit-tested function.
+- **The test suite is the showcase.** A full test pyramid: Vitest for the business logic, Playwright for the API and for the critical user flows (Page Object Model, accessibility scans in light and dark mode), all run by GitHub Actions on every pull request against a production build.
+
+| Discrepancy report                                                                  | Playwright HTML report                                                                 |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| ![The monthly discrepancy report on the demo data](docs/img/discrepancy-report.png) | ![The Playwright report: 220 API and E2E tests passed](docs/img/playwright-report.png) |
+
+All data shown is the fictional demo data. More pages: [an invoice with its findings](docs/img/invoice.png), [a supplier statement compared with the invoices](docs/img/statement.png). The screenshots are taken by Playwright itself (`scripts/screenshots.mjs`).
+
+## Test strategy
+
+| Level  | Tool                                     | Tests           | What it covers                                                                                                                                             |
+| ------ | ---------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static | TypeScript (strict), ESLint, Prettier    | every file      | Types across the app, the API schemas (Zod) and the database client (Prisma); lint and formatting                                                          |
+| Unit   | Vitest                                   | 421 in 49 files | The business logic, with no database: the charge calculator, each reconciliation rule R1–R17, the PDF templates, money and VAT, allocation, the exports    |
+| API    | Playwright (`request`)                   | 156 in 19 files | Every endpoint against the production build: status codes, validation errors, the checks firing end to end, and a test that the demo data trips every rule |
+| E2E    | Playwright (Chromium), Page Object Model | 64 in 15 files  | The critical user flows: enter or upload an invoice, see its findings, the reports, filters, statements; axe accessibility scans in light and dark mode    |
+
+How the tests are built:
+
+- **Independent.** Each API and E2E test creates its own supplier, site and orders through the API (the `api` fixture in `tests/api/fixtures.ts` and `tests/e2e/fixtures.ts`), so any test runs alone and in any order. Only the demo-data tests read the seed.
+- **A real build, its own database.** Playwright builds the app, starts it on port 3100 with `prisma/test.db` recreated for every run, and never touches the development data.
+- **No sleeps, no brittle selectors.** Web-first assertions only; locators by role, label or test id. Pages are wrapped in page objects (`tests/e2e/pages`).
+- **No external services.** PDFs are read by local templates, not by an AI service, and the test documents are fictional, generated by `tests/support/invoice-documents.ts`.
+- **CI.** Lint, typecheck and unit tests in one job; API and E2E in another, with the HTML report uploaded as an artifact of every run.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  user([Browser]) --> pages["Next.js pages<br/>Server Components + Server Actions"]
+  client([API client / tests]) --> api["REST API<br/>route handlers, Zod validation"]
+  pages --> services
+  api --> services["Services<br/>src/server/services"]
+  services --> rules["Pure business logic<br/>src/lib: charging, R1–R17 checks,<br/>PDF templates, reports, exports"]
+  services --> prisma[Prisma] --> db[(SQLite)]
+  services --> files[(PDF storage)]
+  pdf[/Invoice or statement PDF/] --> unpdf["unpdf: text with positions"] --> rules
+```
+
+The pages and the API share the same services, so a test through the API exercises the same code as a click in the UI. Everything that decides something (what is chargeable, which rule fires, how a PDF is read) is a pure function in `src/lib`, which is why most of the tests are fast unit tests.
+
+Design decisions and trade-offs are written up in [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md); the business rules and the phases in [docs/BRIEF.md](docs/BRIEF.md).
 
 ## Run locally
 
@@ -22,6 +71,9 @@ npm run dev
 Then open http://localhost:3000. `npm run db:reset` creates the database with fictional demo data (see below); run it again at any time to start over.
 
 The API and E2E tests build the app and start their own production server on port 3100, with a separate database (`prisma/test.db`) recreated for every run, so they never touch your data and never depend on dev hot reload.
+
+<details>
+<summary>All npm scripts</summary>
 
 | Command                   | What it does                                                        |
 | ------------------------- | ------------------------------------------------------------------- |
@@ -41,9 +93,126 @@ The API and E2E tests build the app and start their own production server on por
 | `npm run db:seed`         | Adds the demo data to an empty database                             |
 | `npm run db:test:prepare` | Recreates the test database (the tests run it themselves)           |
 
+</details>
+
+## How it works
+
+### Reconciliation checks
+
+Every invoice is checked as soon as it is saved, and again when something it depends on changes: an off-hire date entered on one of its orders, a credit note or a later invoice of the same orders or job, or a suspension recorded on the site. Each check is a pure function in `src/lib/reconciliation/checks`, with its own unit test file.
+
+<details>
+<summary>The 17 rules</summary>
+
+| Check | What it finds                                                                                                                                                                                                                                                             | Severity                     |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| R1    | Hire billed after the off-hire date; closed automatically when credit notes cover the overcharge                                                                                                                                                                          | High                         |
+| R2    | Hire billed before the start of hire                                                                                                                                                                                                                                      | High                         |
+| R3    | The same item billed twice for the same working days                                                                                                                                                                                                                      | High                         |
+| R5    | A hire line that differs from the agreed rate x chargeable units by more than £0.05                                                                                                                                                                                       | Medium (Low if undercharged) |
+| R7    | A continuation invoice after the order's return invoice                                                                                                                                                                                                                   | Medium                       |
+| R9    | A damage, loss, repair or service charge with no event recorded on the site from 60 days before the invoice to 7 days after (same item when both give a fleet code); low when the site is not known                                                                       | Medium                       |
+| R10   | Line VAT that is not 20% rounded to the penny, a VAT total that is neither the sum of the lines' VAT nor 20% of the net total (both ways of rounding are allowed), or totals that do not add up                                                                           | Medium                       |
+| R11   | Supplier statement: an invoice on it that is not in Hire Tracker or for another amount (high); an unpaid invoice of ours dated before it that it does not list, or, on the latest statement, an invoice we paid that it still lists (medium). Shown on the statement page | High, Medium                 |
+| R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing                                                                                                                              | Medium (Low if missing)      |
+| R4    | An order on hire for a month with no invoice covering it (monthly report)                                                                                                                                                                                                 | Report                       |
+| R6    | A weekly rate that changed since the item's previous billing                                                                                                                                                                                                              | Medium                       |
+| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order                                                                                                                                                                 | High / Medium                |
+| R12   | The same product (identified by a fleet code, hired one at a time) at different weekly rates on orders started within six months of each other; once per item                                                                                                             | Low                          |
+| R14   | A "last invoice" that is not the previous invoice held for the job                                                                                                                                                                                                        | Medium                       |
+| R15   | A fleet code billed last month that is gone with no return invoice, or new on the job: confirm on site                                                                                                                                                                    | Medium / Low                 |
+| R16   | A missing or wrong suspension credit on a site with a recorded suspension                                                                                                                                                                                                 | High / Medium                |
+| R17   | A collection or delivery charged more than once for the same order                                                                                                                                                                                                        | Medium                       |
+
+</details>
+
+The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists every finding on the month's invoices, the amount overcharged on open findings, and the orders on hire with no invoice (R4). R11 is shown on each statement's page (`/statements`).
+
+<details>
+<summary>Linking invoices to orders and sites</summary>
+
+- **Our order number** is the key from an invoice to a hire order when the supplier prints it ("Order No" on contract-layout invoices); the supplier's job number is the fallback, and the only key on despatch-layout invoices, where "Our Ref" is the supplier's job number.
+- **Fleet codes (E-codes)** link each invoice line to the item. When the supplier swaps an item, record its new code on the site page: the old code stays in the item's history, so invoices with either code link to the item, and the month-to-month check (R15) sees one item, not one gone and one unknown.
+- **The site** of an invoice is the site of its linked order. An invoice with no order is matched by the customer reference (the spellings recorded on the site page, then the name and code), then by a spelling or the site name in the delivery address, then by the delivery postcode, and never by a guess between two sites.
+- Lines are linked again automatically when an order, item or code is entered, so the result does not depend on the order data is entered in: a line linked to the only order with its fleet code moves to the invoice's own order once that exists (an item hired again on a new job).
+
+</details>
+
+<details>
+<summary>Reading invoice PDFs</summary>
+
+On **Enter an invoice** (`/invoices/new`), choose the supplier's PDF and **Read PDF**: the form fills in, a list says what to check, and nothing is saved until you have checked the form and pressed **Save invoice**. The PDF is kept with the invoice (`INVOICE_FILES_DIR`, git-ignored) and opens from the invoice page.
+
+- **No AI and no API key.** The suppliers' invoices are PDFs with text, so the app reads them with one template per layout (`src/lib/extraction`): the same result every time, fully tested, free. A scanned PDF, or a layout the app does not know, is kept and entered by hand.
+- **Two layouts.** _Despatch_: "Label : value" headers, "Our Ref" is the supplier's job number, items grouped under despatch notes with the fleet code ("Ecode") on the row below, VAT by VAT code. _Contract_: "Order No" is our order number, "Contract No." the job, one block per item with the fleet code in brackets and "£72.00 per week for 4 weeks".
+- **The supplier** is found by the account number printed on the invoice, so give each supplier its account number.
+- **Nothing is guessed.** A field that cannot be read is left empty with a warning; lines that do not add up to the totals are reported. Credit notes become negative amounts, and a suspension credit printed under an item becomes a negative hire line for that item (what R16 looks for).
+- **How the PDF is read.** A PDF stores text as pieces placed on the page. The app puts them back into rows by height and into columns by the gaps between them (`src/lib/extraction/pdf-lines.ts`), then each template reads values by their labels and columns.
+
+**Many at once.** On **Upload invoices** (`/invoices/upload`), choose a month's PDFs: they are sent one at a time, with the progress and each result listed. An invoice read cleanly (known layout, no warnings, supplier found, not recorded yet) is saved with its PDF and checked. One already recorded is skipped. Any other waits on **To check** (`/invoices/review`): it opens in the invoice form with what was read, and the fields the PDF did not give are marked, so nothing doubtful is saved unseen. Tried locally on a real month: 40 PDFs, all saved in 2 seconds, matching the spreadsheet and the statement to the penny.
+
+The tests use fictional documents written in the two layouts, as text and as generated PDFs (`tests/support/invoice-documents.ts`). The templates were also checked locally on the real invoices, which never leave the local machine.
+
+</details>
+
+<details>
+<summary>Supplier statements</summary>
+
+A supplier statement lists the invoices the supplier considers still open on its date. On **Statements**, import the PDF: the app reads it (the despatch supplier's layout), finds the supplier by the account number printed on it, refuses it if its lines do not add up to its total, and keeps the file. The statement page then shows, worked out against the invoices held now:
+
+- **Not in Hire Tracker**: an invoice on the statement that was never received. Ask the supplier for a copy.
+- **Amount differs**: the statement and the invoice disagree.
+- **Not on the statement**: an invoice we hold as unpaid, dated before the statement, that the supplier no longer lists. It has been paid or settled; one button marks them all paid.
+- **Paid, still listed**: an invoice we marked paid that is still open on the latest statement. Check the payment reached the supplier.
+
+Because the comparison is worked out each time, entering a missing invoice later clears its problem. Checked locally on eight months of real statements and invoices: every line on every statement found, every amount equal, and every invoice on at least one statement.
+
+</details>
+
+<details>
+<summary>Cost reports</summary>
+
+- **Monthly costs** (`/reports/costs`): the month's net cost by site and trade, as on the cost allocation sheet, with the lines behind each site. An invoice belongs to the month of its date. A line takes its own trade, else its order's; lines with neither are shown as "No trade", and invoices with no site as "No site", never guessed.
+- **Exports:** every line as CSV, an Excel workbook (summary and lines), or a ZIP with one folder per site (`RVS - Riverside Tower/`) holding its invoice PDFs and a `summary.csv`.
+- **Yearly totals** (`/reports/yearly`): each site's gross cost by month, with month and year totals, as CSV or Excel.
+- **They add up to the invoices.** When a supplier rounded VAT once on the total, the penny difference goes to the invoice's largest lines, so every report matches the invoices as printed. Sums are kept in pence.
+
+</details>
+
+<details>
+<summary>Damage on site, query emails and alerts</summary>
+
+- **Services, repairs, damage and losses** are recorded on the site page. A charge for damage, loss, repair or service must match one (R9): the real invoices show charges for lost and damaged parts that nobody on site had confirmed.
+- **Query emails.** The invoice page and the monthly report draft a query to the supplier from the open findings: each finding, what it overcharged, and the total. Gaps in our own records (a job we have no order for, an unknown site) are left out. The draft can be edited, copied or opened in your email app; the app never sends anything.
+- **Alerts** (`/alerts`): items on hire for 12 weeks or more (still needed?), items that have cost £1,000 or more (buy instead?), and off-hired items not collected after 7 days. The limits can be changed on the page.
+
+</details>
+
+<details>
+<summary>Filters</summary>
+
+Suppliers are kept apart wherever it matters (linking, checks, statements, query emails); the pages that add them together can be narrowed down:
+
+- **Invoices:** supplier, site, month, payment status, only those with open findings.
+- **Discrepancy report and its query emails, monthly and yearly costs (and their downloads), alerts:** supplier and site.
+
+Every filter is a query parameter of the API too; an empty value means "all".
+
+</details>
+
+<details>
+<summary>Dark mode</summary>
+
+The header has a **Theme** picker: System (the default, follows the computer's setting), Light or Dark, remembered in the browser. Colours are named tokens in `src/app/globals.css` with a light and a dark value, and a small script applies the theme before the page paints, so a dark page never flashes white. E2E tests scan every main page with axe in dark mode, which checks colour contrast too.
+
+</details>
+
 ## API
 
 Endpoints take and return JSON, except that a PDF is sent as a multipart form and an invoice's PDF comes back as a PDF. Money is in pounds, dates are `YYYY-MM-DD`. Every error has the same shape: `{ "error": { "code", "message", "issues"? } }`.
+
+<details>
+<summary>All endpoints</summary>
 
 | Method and path                                                                        | What it does                                                                                                             | Errors                        |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
@@ -87,93 +256,14 @@ Endpoints take and return JSON, except that a PDF is sent as a multipart form an
 | `GET /api/sites/recognize?customerRef=&deliveryAddress=`                               | Which site a customer reference and address point to (alias, name, code, postcode)                                       | 400                           |
 | `POST /api/orders/:id/items/:itemId/fleet-code`                                        | Record a new fleet code (E-code) for a swapped item; links and re-checks the invoices                                    | 400, 404                      |
 
-## Reconciliation checks
-
-Every invoice is checked as soon as it is saved, and again when something it depends on changes: an off-hire date entered on one of its orders, a credit note or a later invoice of the same orders or job, or a suspension recorded on the site. Each check is a pure function in `src/lib/reconciliation/checks`, with its own unit test file.
-
-| Check | What it finds                                                                                                                                                                                                                                                             | Severity                     |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| R1    | Hire billed after the off-hire date; closed automatically when credit notes cover the overcharge                                                                                                                                                                          | High                         |
-| R2    | Hire billed before the start of hire                                                                                                                                                                                                                                      | High                         |
-| R3    | The same item billed twice for the same working days                                                                                                                                                                                                                      | High                         |
-| R5    | A hire line that differs from the agreed rate x chargeable units by more than £0.05                                                                                                                                                                                       | Medium (Low if undercharged) |
-| R7    | A continuation invoice after the order's return invoice                                                                                                                                                                                                                   | Medium                       |
-| R9    | A damage, loss, repair or service charge with no event recorded on the site from 60 days before the invoice to 7 days after (same item when both give a fleet code); low when the site is not known                                                                       | Medium                       |
-| R10   | Line VAT that is not 20% rounded to the penny, a VAT total that is neither the sum of the lines' VAT nor 20% of the net total (both ways of rounding are allowed), or totals that do not add up                                                                           | Medium                       |
-| R11   | Supplier statement: an invoice on it that is not in Hire Tracker or for another amount (high); an unpaid invoice of ours dated before it that it does not list, or, on the latest statement, an invoice we paid that it still lists (medium). Shown on the statement page | High, Medium                 |
-| R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing                                                                                                                              | Medium (Low if missing)      |
-| R4    | An order on hire for a month with no invoice covering it (monthly report)                                                                                                                                                                                                 | Report                       |
-| R6    | A weekly rate that changed since the item's previous billing                                                                                                                                                                                                              | Medium                       |
-| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order                                                                                                                                                                 | High / Medium                |
-| R12   | The same product (identified by a fleet code, hired one at a time) at different weekly rates on orders started within six months of each other; once per item                                                                                                             | Low                          |
-| R14   | A "last invoice" that is not the previous invoice held for the job                                                                                                                                                                                                        | Medium                       |
-| R15   | A fleet code billed last month that is gone with no return invoice, or new on the job: confirm on site                                                                                                                                                                    | Medium / Low                 |
-| R16   | A missing or wrong suspension credit on a site with a recorded suspension                                                                                                                                                                                                 | High / Medium                |
-| R17   | A collection or delivery charged more than once for the same order                                                                                                                                                                                                        | Medium                       |
-
-The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists every finding on the month's invoices, the amount overcharged on open findings, and the orders on hire with no invoice (R4). R11 is shown on each statement's page (`/statements`).
-
-## Linking invoices to orders and sites
-
-- **Our order number** is the key from an invoice to a hire order when the supplier prints it ("Order No" on contract-layout invoices); the supplier's job number is the fallback, and the only key on despatch-layout invoices, where "Our Ref" is the supplier's job number.
-- **Fleet codes (E-codes)** link each invoice line to the item. When the supplier swaps an item, record its new code on the site page: the old code stays in the item's history, so invoices with either code link to the item, and the month-to-month check (R15) sees one item, not one gone and one unknown.
-- **The site** of an invoice is the site of its linked order. An invoice with no order is matched by the customer reference (the spellings recorded on the site page, then the name and code), then by a spelling or the site name in the delivery address, then by the delivery postcode, and never by a guess between two sites.
-- Lines are linked again automatically when an order, item or code is entered, so the result does not depend on the order data is entered in: a line linked to the only order with its fleet code moves to the invoice's own order once that exists (an item hired again on a new job).
-
-## Reading invoice PDFs
-
-On **Enter an invoice** (`/invoices/new`), choose the supplier's PDF and **Read PDF**: the form fills in, a list says what to check, and nothing is saved until you have checked the form and pressed **Save invoice**. The PDF is kept with the invoice (`INVOICE_FILES_DIR`, git-ignored) and opens from the invoice page.
-
-- **No AI and no API key.** The suppliers' invoices are PDFs with text, so the app reads them with one template per layout (`src/lib/extraction`): the same result every time, fully tested, free. A scanned PDF, or a layout the app does not know, is kept and entered by hand.
-- **Two layouts.** _Despatch_: "Label : value" headers, "Our Ref" is the supplier's job number, items grouped under despatch notes with the fleet code ("Ecode") on the row below, VAT by VAT code. _Contract_: "Order No" is our order number, "Contract No." the job, one block per item with the fleet code in brackets and "£72.00 per week for 4 weeks".
-- **The supplier** is found by the account number printed on the invoice, so give each supplier its account number.
-- **Nothing is guessed.** A field that cannot be read is left empty with a warning; lines that do not add up to the totals are reported. Credit notes become negative amounts, and a suspension credit printed under an item becomes a negative hire line for that item (what R16 looks for).
-- **How the PDF is read.** A PDF stores text as pieces placed on the page. The app puts them back into rows by height and into columns by the gaps between them (`src/lib/extraction/pdf-lines.ts`), then each template reads values by their labels and columns.
-
-**Many at once.** On **Upload invoices** (`/invoices/upload`), choose a month's PDFs: they are sent one at a time, with the progress and each result listed. An invoice read cleanly (known layout, no warnings, supplier found, not recorded yet) is saved with its PDF and checked. One already recorded is skipped. Any other waits on **To check** (`/invoices/review`): it opens in the invoice form with what was read, and the fields the PDF did not give are marked, so nothing doubtful is saved unseen. Tried locally on a real month: 40 PDFs, all saved in 2 seconds, matching the spreadsheet and the statement to the penny.
-
-The tests use fictional documents written in the two layouts, as text and as generated PDFs (`tests/support/invoice-documents.ts`). The templates were also checked locally on the real invoices, which never leave the local machine.
-
-## Supplier statements
-
-A supplier statement lists the invoices the supplier considers still open on its date. On **Statements**, import the PDF: the app reads it (the despatch supplier's layout), finds the supplier by the account number printed on it, refuses it if its lines do not add up to its total, and keeps the file. The statement page then shows, worked out against the invoices held now:
-
-- **Not in Hire Tracker**: an invoice on the statement that was never received. Ask the supplier for a copy.
-- **Amount differs**: the statement and the invoice disagree.
-- **Not on the statement**: an invoice we hold as unpaid, dated before the statement, that the supplier no longer lists. It has been paid or settled; one button marks them all paid.
-- **Paid, still listed**: an invoice we marked paid that is still open on the latest statement. Check the payment reached the supplier.
-
-Because the comparison is worked out each time, entering a missing invoice later clears its problem. Checked locally on eight months of real statements and invoices: every line on every statement found, every amount equal, and every invoice on at least one statement.
-
-## Cost reports
-
-- **Monthly costs** (`/reports/costs`): the month's net cost by site and trade, as on the cost allocation sheet, with the lines behind each site. An invoice belongs to the month of its date. A line takes its own trade, else its order's; lines with neither are shown as "No trade", and invoices with no site as "No site", never guessed.
-- **Exports:** every line as CSV, an Excel workbook (summary and lines), or a ZIP with one folder per site (`RVS - Riverside Tower/`) holding its invoice PDFs and a `summary.csv`.
-- **Yearly totals** (`/reports/yearly`): each site's gross cost by month, with month and year totals, as CSV or Excel.
-- **They add up to the invoices.** When a supplier rounded VAT once on the total, the penny difference goes to the invoice's largest lines, so every report matches the invoices as printed. Sums are kept in pence.
-
-## Damage on site, query emails and alerts
-
-- **Services, repairs, damage and losses** are recorded on the site page. A charge for damage, loss, repair or service must match one (R9): the real invoices show charges for lost and damaged parts that nobody on site had confirmed.
-- **Query emails.** The invoice page and the monthly report draft a query to the supplier from the open findings: each finding, what it overcharged, and the total. Gaps in our own records (a job we have no order for, an unknown site) are left out. The draft can be edited, copied or opened in your email app; the app never sends anything.
-- **Alerts** (`/alerts`): items on hire for 12 weeks or more (still needed?), items that have cost £1,000 or more (buy instead?), and off-hired items not collected after 7 days. The limits can be changed on the page.
-
-## Filters
-
-Suppliers are kept apart wherever it matters (linking, checks, statements, query emails); the pages that add them together can be narrowed down:
-
-- **Invoices:** supplier, site, month, payment status, only those with open findings.
-- **Discrepancy report and its query emails, monthly and yearly costs (and their downloads), alerts:** supplier and site.
-
-Every filter is a query parameter of the API too; an empty value means "all".
-
-## Dark mode
-
-The header has a **Theme** picker: System (the default, follows the computer's setting), Light or Dark, remembered in the browser. Colours are named tokens in `src/app/globals.css` with a light and a dark value, and a small script applies the theme before the page paints, so a dark page never flashes white. E2E tests scan every main page with axe in dark mode, which checks colour contrast too.
+</details>
 
 ## Demo data
 
 `npm run db:reset` loads two suppliers. Summit Access Ltd (account HT014, 20% damage waiver, 30 days) has no data yet: it is there to read contract-layout invoices. Apex Plant Hire (account APX-000123) comes with 3 sites, 4 hire orders, 12 invoices from July to September 2026, a damage recorded on site and the 1 October statement. The data goes through the app's own services, and it deliberately contains supplier mistakes. An API test checks that every implemented rule finds at least one of them.
+
+<details>
+<summary>The mistakes in the demo data, and the rule that finds each</summary>
 
 | Invoice                         | Site     | Mistake                                                                                                                    | Found by     |
 | ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- | ------------ |
@@ -196,6 +286,8 @@ The header has a **Theme** picker: System (the default, follows the computer's s
 
 July is paid, APX-20820 is queried, and the rest is unpaid, which fills the payments page.
 
+</details>
+
 ## Continuous integration
 
 GitHub Actions runs on every pull request and on every push to `main` (`.github/workflows/ci.yml`):
@@ -207,4 +299,8 @@ GitHub Actions runs on every pull request and on every push to `main` (`.github/
 
 Environment variables are documented in `.env.example`. Copy it to `.env` for local settings. `.env` is never committed. Uploaded PDFs go to `INVOICE_FILES_DIR` (default `storage/invoice-files`), which is git-ignored; the tests use `storage/test-invoice-files` and empty it before each run.
 
-Status: Phases 0 to 7 done: the charge calculator, sites and orders, invoices, the reconciliation checks R1 to R17, reading invoice PDFs, supplier statements, cost reports with exports, damage on site, query emails and alerts. Next: the optional Phase 8 and the polish of Phase 9. All data in this repository is fictional.
+## Status
+
+Phases 0 to 7 are done: the charge calculator, sites and orders, invoices, the reconciliation checks R1 to R17, reading invoice PDFs, supplier statements, cost reports with exports, damage on site, query emails and alerts. All data in this repository is fictional.
+
+[Contributing](CONTRIBUTING.md) · [MIT licence](LICENSE)

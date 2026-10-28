@@ -1,6 +1,6 @@
-# Interview notes
+# Design notes
 
-What I can explain about this project, phase by phase.
+The design decisions behind Hire Tracker, how it is tested, and what building it taught me, phase by phase. The application and its tests are mine; real documents were only ever used locally, and everything in the repository is fictional.
 
 ## Phase 0: setup
 
@@ -90,7 +90,7 @@ What I can explain about this project, phase by phase.
 
 ## Phase 5a: our order number, site recognition and fleet code changes
 
-- **Domain knowledge turned into rules.** Florin told me our order number is the real key and that E-codes change when items are swapped. I wrote both into the brief first, asked what each code actually is, and only then changed the data model.
+- **Domain knowledge turned into rules.** In the real documents, our order number is the real key, and E-codes change when items are swapped. I wrote both into the brief first, pinned down what each code actually is, and only then changed the data model.
 - **Refactor first, then behaviour.** Changing the linking function's signature was a separate commit with no behaviour change and all tests green; the new behaviour came after, test-first.
 - **Identity over raw values.** R15 now compares items, not codes: a recorded code change is the same item, and an unrecorded one is reported once as a possible swap instead of two unrelated findings.
 - **Recognition that refuses to guess.** Site recognition tries an explicit order of rules (alias, name, code, name words, postcode) and returns candidates instead of a site when a rule fits two. A wrong site is worse than no site.
@@ -100,7 +100,7 @@ What I can explain about this project, phase by phase.
 
 ## Phase 5b: reading invoice PDFs
 
-- **The simplest tool that does the job.** The brief planned AI extraction. Looking at the real documents first showed two suppliers, both sending PDFs with text. A template per layout is exact, free, fast and testable without mocks, so I proposed it, Florin agreed, and AI stays a fallback for a future third supplier.
+- **The simplest tool that does the job.** The brief planned AI extraction. Looking at the real documents first showed two suppliers, both sending PDFs with text. A template per layout is exact, free, fast and testable without mocks, so I chose it, and AI stays a fallback for a future third supplier.
 - **Test data that behaves like the real thing.** The fixtures are fictional documents written as text in each layout. A helper turns them into text fragments for fast unit tests and into real PDFs (pdf-lib) for round-trip tests through the same PDF reader the app uses. Neither contains real data.
 - **Validated on production data without committing it.** A local-only test in the git-ignored folder ran every real invoice through the reader: 269 invoices. It found three real problems, and each got a fictional failing test before the fix: VAT rounded once on the total, suspension credits printed under an item, and a site address broken by text at other heights.
 - **Questioning the spec with evidence.** The brief said VAT is rounded per line. The real invoices round once on the total, which is also allowed. I changed R10 to accept both and flag anything else, updated the existing test that encoded the old rule, and wrote the reason in the brief.
@@ -115,7 +115,7 @@ What I can explain about this project, phase by phase.
 
 - **Understand the document before writing the rule.** The brief said R11 flags an invoice we hold that is not on the statement. The real statements list only open invoices, so a paid invoice is never on them; applied literally, the rule would flag every paid invoice. The rule became: unpaid invoices dated before the statement must be on it, and "paid but still listed" is checked only on the latest statement.
 - **Derived data is computed, not stored.** The comparison is a pure function run on every view, so it can never go stale: an API test enters the missing invoice after the statement and the problem disappears.
-- **The acceptance test the user asked for.** Every real invoice and statement went through the API locally (269 invoices, seven statements, 325 lines): every amount equal, every invoice on a statement, the only gaps invoices older than the first month of documents. It also exposed a usability problem: hundreds of "not on the statement" rows that really meant "paid". One action now marks them paid, and the statements then match exactly.
+- **An acceptance test on real data.** Every real invoice and statement went through the API locally (269 invoices, seven statements, 325 lines): every amount equal, every invoice on a statement, the only gaps invoices older than the first month of documents. It also exposed a usability problem: hundreds of "not on the statement" rows that really meant "paid". One action now marks them paid, and the statements then match exactly.
 - **Refuse what cannot be trusted.** A statement whose lines do not add up to its own total is refused rather than half-imported, because every comparison after it would be built on a misread line.
 - **E2E tests find UX bugs.** The confirmation message vanished with the button it belonged to; the E2E test failed on it, and the form now stays on the page.
 - **Mutation checks on the boundaries:** "dated before" versus "on or before" the statement, and "latest statement only", each break a unit test when changed.
@@ -145,12 +145,12 @@ What I can explain about this project, phase by phase.
 - **Real data finds what fictional data does not.** Importing the 62 real hire orders behind the invoices (from the spreadsheet and the invoices, through the app's API) found two bugs no test had covered: an item hired again on a new job stayed linked to its old job when the new order was entered after the invoice, and R17 counted a supplier's transport supplement, and separate trips on other days, as transport charged twice (80 false findings).
 - **Each bug became a failing test first,** reproduced with fictional data, then the fix: relinking now recomputes every line (linking is a pure function, so this is cheap and order-independent), and transport lines keep the day of the trip so R17 compares the same trip. False R1, R7 and R8 findings disappeared and R17 went from 80 findings to 1, which is a real question for the supplier.
 - **Backups before bulk changes.** The local database was copied before the import, so it could be restored.
-- **A domain expert's rule beats a clever one.** R12 compared items by description alone. Florin pointed out that an item without an E-code may not be the same product, and a line can hire ten of something. Measured on the real data, most findings compared orders started months apart (a 2% price rise between them) and repeated every month. The rule now compares only identified items hired one at a time, within six months, once per item: 200 findings became 29. The six months is a named constant, because Florin is not yet sure of it.
-- **Acceptance against the user's own records.** The final check compared the app with three independent sources the business already trusted: the supplier statements (every line matched), the folders the user had sorted by hand (260 of 260 invoices on the same site), and the user's spreadsheet totals (every site and month equal to the penny, net and gross). Even the gap reconciled: the 22 invoices missing from the earliest statement add up exactly to the spreadsheet's January total.
+- **Domain knowledge beats a clever rule.** R12 compared items by description alone. But an item without an E-code may not be the same product, and a line can hire ten of something. Measured on the real data, most findings compared orders started months apart (a 2% price rise between them) and repeated every month. The rule now compares only identified items hired one at a time, within six months, once per item: 200 findings became 29. The six months is a named constant, because the right window is still to be confirmed.
+- **Acceptance against the business's own records.** The final check compared the app with three independent sources the business already trusted: the supplier statements (every line matched), the folders I had sorted by hand (260 of 260 invoices on the same site), and the spreadsheet totals (every site and month equal to the penny, net and gross). Even the gap reconciled: the 22 invoices missing from the earliest statement add up exactly to the spreadsheet's January total.
 
 ## Uploading many invoices
 
-- **Automate the clean case, keep a human on the doubtful one.** A batch saves only invoices read with no warnings, from a recognised supplier, not recorded yet. The rest wait on a "To check" list with the PDF and what was read, and open in the form with the missing fields marked. Florin asked whether those should be saved with empty fields; saving them would put incomplete invoices into reports and statements, so they wait until a person completes them.
+- **Automate the clean case, keep a human on the doubtful one.** A batch saves only invoices read with no warnings, from a recognised supplier, not recorded yet. The rest wait on a "To check" list with the PDF and what was read, and open in the form with the missing fields marked. I considered saving them with empty fields, but that would put incomplete invoices into reports and statements, so they wait until a person completes them.
 - **Small requests, visible progress.** The page sends the files one at a time instead of one large upload, so no request hits the size limit and the person sees "Reading 12 of 40".
 - **One rule, two entry points.** A batch invoice is saved through the same service as one typed in, so it gets the same linking, site and checks; saving any invoice with a kept PDF clears its draft.
 - **Tried on real data in a copy.** With one month's invoices removed from a copy of the local database, uploading the real folder saved all 40 in 2 seconds, and the month matched the spreadsheet and the statements to the penny. The real database was not touched.
@@ -161,4 +161,4 @@ What I can explain about this project, phase by phase.
 - **No flash.** The chosen theme is applied by a tiny inline script in `<head>` before the page paints; `suppressHydrationWarning` on `<html>` says the attribute differs from the server on purpose.
 - **External state the React way.** The stored choice is read with `useSyncExternalStore`, which also follows a change made in another tab; the lint rule against setting state inside an effect pointed there.
 - **Accessibility in both themes.** Every main page is scanned with axe in dark mode as well, and axe checks colour contrast, so a dark text on a dark background fails the build.
-- **A live demo is a test too.** Showing the monthly workflow on the real September invoices, Florin asked why two items were reported as gone. Both had been returned: one through a credit note of type Return, one billed only to the 25th the month before. R15 now reads both as returns, and its messages name the item and the previous invoice, because the old wording made him ask "isn't that the invoice?".
+- **A live run is a test too.** Running the monthly workflow on the real September invoices, two items were reported as gone, yet both had been returned: one through a credit note of type Return, one billed only to the 25th the month before. R15 now reads both as returns, and its messages name the item and the previous invoice, because the old wording read as if the item was missing from the very invoice it was on.
