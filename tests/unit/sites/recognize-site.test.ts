@@ -65,7 +65,7 @@ describe("recognizeSite: which site an invoice is for, from how the supplier wro
   ])(
     "finds %s in the delivery address when the reference is something else",
     (_what, deliveryAddress, siteId) => {
-      expect(recognizeSite({ customerRef: "REDACTED", deliveryAddress }, sites)).toEqual({
+      expect(recognizeSite({ customerRef: "ZZ9000/PO000001", deliveryAddress }, sites)).toEqual({
         siteId,
         matchedBy: "ADDRESS",
         candidates: [siteId],
