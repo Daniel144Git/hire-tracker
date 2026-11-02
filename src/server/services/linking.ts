@@ -71,7 +71,7 @@ export async function relinkInvoices(supplierId: string): Promise<void> {
   const orders = await loadOrdersForLinking(supplierId);
   const lines = await db.invoiceLine.findMany({
     where: { invoice: { supplierId } },
-    include: { invoice: { select: { id: true, orderRef: true, jobNo: true } } },
+    include: { invoice: { select: { id: true, orderRef: true, jobNo: true, customerRef: true } } },
   });
 
   const changed = new Set<string>();

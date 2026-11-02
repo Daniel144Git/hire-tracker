@@ -146,4 +146,75 @@ describe("R8: fleet code not on an order of this job and site", () => {
       }),
     ]);
   });
+
+  it("reports the unknown fleet codes of a job with no order once, with the job: our gap, not an overcharge", () => {
+    // A new hire billed before its order was entered: each item's fleet code is on no order
+    // because the order itself is missing, so no money is at stake until it is entered.
+    const ctx = context({
+      orders: [],
+      invoice: invoice({
+        jobNo: "J999999",
+        lines: [
+          hireLine({
+            id: "line-1",
+            fleetCode: "APX-ZZ-0001",
+            orderId: null,
+            hireItemId: null,
+            linkProblem: "UNKNOWN_FLEET_CODE",
+          }),
+          hireLine({
+            id: "line-2",
+            position: 2,
+            fleetCode: "APX-ZZ-0002",
+            orderId: null,
+            hireItemId: null,
+            linkProblem: "UNKNOWN_FLEET_CODE",
+          }),
+          hireLine({
+            id: "line-3",
+            position: 3,
+            fleetCode: null,
+            orderId: null,
+            hireItemId: null,
+            linkProblem: "UNKNOWN_JOB_NO",
+          }),
+        ],
+      }),
+    });
+
+    expect(fleetCodeNotOnOrder(ctx)).toEqual([
+      expect.objectContaining({
+        check: "R8",
+        severity: "MEDIUM",
+        invoiceLineId: null,
+        message:
+          "Job number J999999 is not on any hire order (fleet codes APX-ZZ-0001, APX-ZZ-0002)",
+        difference: null,
+      }),
+    ]);
+  });
+
+  it("reports the job with its fleet codes even when every line has a fleet code", () => {
+    const ctx = context({
+      orders: [],
+      invoice: invoice({
+        jobNo: "J999999",
+        lines: [
+          hireLine({
+            fleetCode: "APX-ZZ-0001",
+            orderId: null,
+            hireItemId: null,
+            linkProblem: "UNKNOWN_FLEET_CODE",
+          }),
+        ],
+      }),
+    });
+
+    expect(fleetCodeNotOnOrder(ctx)).toEqual([
+      expect.objectContaining({
+        severity: "MEDIUM",
+        message: "Job number J999999 is not on any hire order (fleet codes APX-ZZ-0001)",
+      }),
+    ]);
+  });
 });

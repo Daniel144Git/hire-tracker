@@ -4,7 +4,7 @@ Checks every equipment-hire invoice against what was actually on site, and flags
 
 [![CI](https://github.com/Daniel144Git/hire-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Daniel144Git/hire-tracker/actions/workflows/ci.yml)
 ![Playwright](https://img.shields.io/badge/Playwright-1.64-2EAD33?logo=playwright&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-421_tests-6E9F18?logo=vitest&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-426_tests-6E9F18?logo=vitest&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 
@@ -25,8 +25,8 @@ All data shown is the fictional demo data. More pages: [an invoice with its find
 | Level  | Tool                                     | Tests           | What it covers                                                                                                                                             |
 | ------ | ---------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Static | TypeScript (strict), ESLint, Prettier    | every file      | Types across the app, the API schemas (Zod) and the database client (Prisma); lint and formatting                                                          |
-| Unit   | Vitest                                   | 421 in 49 files | The business logic, with no database: the charge calculator, each reconciliation rule R1–R17, the PDF templates, money and VAT, allocation, the exports    |
-| API    | Playwright (`request`)                   | 156 in 19 files | Every endpoint against the production build: status codes, validation errors, the checks firing end to end, and a test that the demo data trips every rule |
+| Unit   | Vitest                                   | 426 in 49 files | The business logic, with no database: the charge calculator, each reconciliation rule R1–R17, the PDF templates, money and VAT, allocation, the exports    |
+| API    | Playwright (`request`)                   | 157 in 19 files | Every endpoint against the production build: status codes, validation errors, the checks firing end to end, and a test that the demo data trips every rule |
 | E2E    | Playwright (Chromium), Page Object Model | 64 in 15 files  | The critical user flows: enter or upload an invoice, see its findings, the reports, filters, statements; axe accessibility scans in light and dark mode    |
 
 How the tests are built:
@@ -117,7 +117,7 @@ Every invoice is checked as soon as it is saved, and again when something it dep
 | R13   | A damage waiver that is not the supplier's % of the hire lines, is charged on transport, is charged when no order carries one, or is missing                                                                                                                              | Medium (Low if missing)      |
 | R4    | An order on hire for a month with no invoice covering it (monthly report)                                                                                                                                                                                                 | Report                       |
 | R6    | A weekly rate that changed since the item's previous billing                                                                                                                                                                                                              | Medium                       |
-| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order                                                                                                                                                                 | High / Medium                |
+| R8    | A fleet code on no hire order, on more than one, or on an order at another site; a job number on no order (with its fleet codes, not counted as overcharged: the order is still to be entered)                                                                            | High / Medium                |
 | R12   | The same product (identified by a fleet code, hired one at a time) at different weekly rates on orders started within six months of each other; once per item                                                                                                             | Low                          |
 | R14   | A "last invoice" that is not the previous invoice held for the job                                                                                                                                                                                                        | Medium                       |
 | R15   | A fleet code billed last month that is gone with no return invoice, or new on the job: confirm on site                                                                                                                                                                    | Medium / Low                 |
@@ -131,7 +131,7 @@ The monthly discrepancy report (`/reports/discrepancies?month=YYYY-MM`) lists ev
 <details>
 <summary>Linking invoices to orders and sites</summary>
 
-- **Our order number** is the key from an invoice to a hire order when the supplier prints it ("Order No" on contract-layout invoices); the supplier's job number is the fallback, and the only key on despatch-layout invoices, where "Our Ref" is the supplier's job number.
+- **Our order number** is the key from an invoice to a hire order when the supplier prints it ("Order No" on contract-layout invoices, or as the customer reference, "Your Ref"); the supplier's job number is the fallback, and the usual key on despatch-layout invoices, where "Our Ref" is the supplier's job number.
 - **Fleet codes (E-codes)** link each invoice line to the item. When the supplier swaps an item, record its new code on the site page: the old code stays in the item's history, so invoices with either code link to the item, and the month-to-month check (R15) sees one item, not one gone and one unknown.
 - **The site** of an invoice is the site of its linked order. An invoice with no order is matched by the customer reference (the spellings recorded on the site page, then the name and code), then by a spelling or the site name in the delivery address, then by the delivery postcode, and never by a guess between two sites.
 - Lines are linked again automatically when an order, item or code is entered, so the result does not depend on the order data is entered in: a line linked to the only order with its fleet code moves to the invoice's own order once that exists (an item hired again on a new job).
