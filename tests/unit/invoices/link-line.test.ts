@@ -63,6 +63,29 @@ describe("linkInvoiceLine: our order number and fleet code changes", () => {
     );
   });
 
+  it("links by our order number printed as the customer reference", () => {
+    // Some suppliers print our order number only in the free-text "Your Ref".
+    expect(linkInvoiceLine({}, { customerRef: " po-1002 ", jobNo: "J999999" }, withRefs)).toEqual({
+      orderId: "order-2",
+      hireItemId: null,
+      problem: null,
+    });
+  });
+
+  it("ignores a customer reference that is not one of our order numbers", () => {
+    expect(linkInvoiceLine({}, { customerRef: "Riverside", jobNo: "J100101" }, withRefs)).toEqual({
+      orderId: "order-1",
+      hireItemId: null,
+      problem: null,
+    });
+  });
+
+  it("prefers the order number printed as such over the customer reference", () => {
+    expect(
+      linkInvoiceLine({}, { orderRef: "PO-1001", customerRef: "PO-1002" }, withRefs).orderId,
+    ).toBe("order-1");
+  });
+
   it("links a line billed with an item's previous fleet code to that item", () => {
     expect(
       linkInvoiceLine({ fleetCode: "APX-MP-0588" }, { orderRef: "PO-1002" }, withRefs),

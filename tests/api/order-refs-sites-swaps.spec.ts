@@ -41,6 +41,43 @@ test.describe("Our order number", () => {
     expect(relinked.lines[0]).toMatchObject({ order: { id: order.id }, linkProblem: null });
     expect(relinked.site?.id).toBe(site.id);
   });
+
+  test("links by our order number printed as the customer reference once the order is entered", async ({
+    api,
+  }) => {
+    // A new hire billed before its order was entered, with our order number only in "Your Ref".
+    const supplier = await api.createSupplier();
+    const site = await api.createSite();
+    const orderRef = `PO-${uniqueCode(8)}`;
+    const fleetCode = `APX-PV-${uniqueCode(4)}`;
+    const jobNo = `J${uniqueCode(7)}`;
+    const early = await api.createInvoiceForSupplier(supplier, {
+      jobNo,
+      customerRef: orderRef,
+      lines: [julyLine(fleetCode)],
+    });
+
+    // Our gap, reported once with the job and its fleet code, and not as money overcharged.
+    expect(early.findings).toEqual([
+      expect.objectContaining({
+        check: "R8",
+        severity: "MEDIUM",
+        message: `Job number ${jobNo} is not on any hire order (fleet codes ${fleetCode})`,
+        difference: null,
+      }),
+    ]);
+
+    const order = await api.createOrder({
+      supplier,
+      site,
+      overrides: { orderRef, items: [itemData({ fleetCode })] },
+    });
+
+    const relinked = await api.getInvoice(early.id);
+    expect(relinked.lines[0]).toMatchObject({ order: { id: order.id }, linkProblem: null });
+    expect(relinked.site?.id).toBe(site.id);
+    expect(relinked.findings.filter((finding) => finding.check === "R8")).toEqual([]);
+  });
 });
 
 test.describe("Items hired again on a new job", () => {
