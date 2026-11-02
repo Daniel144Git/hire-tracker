@@ -194,7 +194,7 @@ export async function createInvoice(body: unknown): Promise<InvoiceDto> {
         create: lines.map((line, index) => {
           const link = linkInvoiceLine(
             line,
-            { orderRef: input.orderRef, jobNo: input.jobNo },
+            { orderRef: input.orderRef, jobNo: input.jobNo, customerRef: input.customerRef },
             orders,
           );
           return {

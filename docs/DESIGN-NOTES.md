@@ -162,3 +162,8 @@ The design decisions behind Hire Tracker, how it is tested, and what building it
 - **External state the React way.** The stored choice is read with `useSyncExternalStore`, which also follows a change made in another tab; the lint rule against setting state inside an effect pointed there.
 - **Accessibility in both themes.** Every main page is scanned with axe in dark mode as well, and axe checks colour contrast, so a dark text on a dark background fails the build.
 - **A live run is a test too.** Running the monthly workflow on the real September invoices, two items were reported as gone, yet both had been returned: one through a credit note of type Return, one billed only to the 25th the month before. R15 now reads both as returns, and its messages name the item and the previous invoice, because the old wording read as if the item was missing from the very invoice it was on.
+
+## The first month in real use
+
+- **The app found its own reporting bug.** On the first month run end to end, the report claimed an overcharge that was really two new hires whose orders were not entered yet: each of their fleet codes was "on no order" and counted as money at stake. When the invoice's own order is missing, R8 now lists those codes once with the job, as a gap in our records, and the total counts only real overcharges. A unit test and an API test went red first.
+- **Suppliers change what they print.** A supplier started printing our order number in the free-text customer reference. Linking now tries the customer reference as our order number, only when it is exactly one of our order numbers, so a site name there is never mistaken for an order.

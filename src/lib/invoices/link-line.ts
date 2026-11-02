@@ -14,6 +14,8 @@ export interface OrderForLinking {
 export interface InvoiceHeaderRefs {
   orderRef?: string | null;
   jobNo?: string | null;
+  /** The free-text "Your Ref": some suppliers print our order number only there. */
+  customerRef?: string | null;
 }
 
 export interface LineLink {
@@ -32,7 +34,8 @@ function codesOf(item: OrderForLinking["items"][number]): string[] {
 
 /**
  * Links one invoice line to the supplier's hire orders.
- * The header's order: by our order number first, then by the supplier's job number.
+ * The header's order: by our order number first (printed as such, or as the customer
+ * reference), then by the supplier's job number.
  * 1. A line with a fleet code links to the item with that code (current or earlier), first
  *    within the header's order, otherwise on any order if exactly one item matches.
  * 2. A line without one (damage waiver, transport) links to the header's order.
@@ -43,8 +46,10 @@ export function linkInvoiceLine(
   header: InvoiceHeaderRefs,
   orders: OrderForLinking[],
 ): LineLink {
+  const customerRef = header.customerRef?.trim().toUpperCase();
   const headerOrder =
     (header.orderRef && orders.find((order) => order.orderRef === header.orderRef)) ||
+    (customerRef && orders.find((order) => order.orderRef?.toUpperCase() === customerRef)) ||
     (header.jobNo && orders.find((order) => order.supplierJobNo === header.jobNo)) ||
     undefined;
   const headerOrderId = headerOrder?.id ?? null;

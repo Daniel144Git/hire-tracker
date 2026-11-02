@@ -4,17 +4,23 @@ import type { Check, Finding } from "../types";
 /**
  * R8: a fleet code charged that is on no hire order (are we paying for something not on site?),
  * on more than one, or on an order of another site than the invoice's job. Also a job number
- * that matches no order.
+ * that matches no order. When the invoice's own order is not entered yet, its fleet codes on no
+ * order are the same gap in our records: listed with the job, not as money at stake.
  */
 export const fleetCodeNotOnOrder: Check = (context) => {
   const { invoice } = context;
   const findings: Finding[] = [];
   const jobOrder = jobOrderOf(context);
+  const headerRef = invoice.orderRef ?? invoice.jobNo;
+  const codesOfMissingOrder: string[] = [];
 
   for (const line of invoice.lines) {
     // A credit (e.g. a suspension credit) with an unknown fleet code costs nothing: not flagged.
     if (line.linkProblem === "UNKNOWN_FLEET_CODE" && line.net <= 0) continue;
-    if (line.linkProblem === "UNKNOWN_FLEET_CODE") {
+    if (line.linkProblem === "UNKNOWN_FLEET_CODE" && line.orderId === null && headerRef) {
+      // Linking gives such a line the invoice's own order: none means that order is missing.
+      codesOfMissingOrder.push(line.fleetCode as string);
+    } else if (line.linkProblem === "UNKNOWN_FLEET_CODE") {
       findings.push(
         finding(
           "R8",
@@ -51,19 +57,22 @@ export const fleetCodeNotOnOrder: Check = (context) => {
     }
   }
 
-  if (invoice.lines.some((line) => line.linkProblem === "UNKNOWN_ORDER_REF")) {
+  const codes =
+    codesOfMissingOrder.length > 0 ? ` (fleet codes ${codesOfMissingOrder.join(", ")})` : "";
+  const orderRefUnknown = invoice.lines.some((line) => line.linkProblem === "UNKNOWN_ORDER_REF");
+  const jobNoUnknown = invoice.lines.some((line) => line.linkProblem === "UNKNOWN_JOB_NO");
+  if (orderRefUnknown || (codes && invoice.orderRef)) {
     findings.push(
       finding(
         "R8",
         "MEDIUM",
         null,
-        `Our order number ${invoice.orderRef} is not on any hire order`,
+        `Our order number ${invoice.orderRef} is not on any hire order${codes}`,
       ),
     );
-  }
-  if (invoice.lines.some((line) => line.linkProblem === "UNKNOWN_JOB_NO")) {
+  } else if (jobNoUnknown || codes) {
     findings.push(
-      finding("R8", "MEDIUM", null, `Job number ${invoice.jobNo} is not on any hire order`),
+      finding("R8", "MEDIUM", null, `Job number ${invoice.jobNo} is not on any hire order${codes}`),
     );
   }
   return findings;
