@@ -165,7 +165,10 @@ test.describe("GET and PATCH /api/orders/:id", () => {
     expect((await response.json()).trade).toBe("VENT");
   });
 
-  test("re-checks the order's invoices when its damage waiver changes", async ({ request, api }) => {
+  test("re-checks the order's invoices when its damage waiver changes", async ({
+    request,
+    api,
+  }) => {
     const order = await api.createOrder();
     const invoice = await api.createInvoice(order);
     expect(invoice.findings).toEqual([]);
