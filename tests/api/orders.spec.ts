@@ -165,6 +165,23 @@ test.describe("GET and PATCH /api/orders/:id", () => {
     expect((await response.json()).trade).toBe("VENT");
   });
 
+  test("re-checks the order's invoices when its damage waiver changes", async ({ request, api }) => {
+    const order = await api.createOrder();
+    const invoice = await api.createInvoice(order);
+    expect(invoice.findings).toEqual([]);
+    const setWaiver = (damageWaiverApplies: boolean) =>
+      request.patch(`/api/orders/${order.id}`, { data: { damageWaiverApplies } });
+
+    expect((await setWaiver(false)).status()).toBe(200);
+    // A waiver the supplier still charges is now money we should not pay.
+    expect((await api.getInvoice(invoice.id)).findings).toEqual([
+      expect.objectContaining({ check: "R13", severity: "MEDIUM", difference: 21 }),
+    ]);
+
+    expect((await setWaiver(true)).status()).toBe(200);
+    expect((await api.getInvoice(invoice.id)).findings).toEqual([]);
+  });
+
   test("does not let the status be changed directly", async ({ request, api }) => {
     const order = await api.createOrder();
 

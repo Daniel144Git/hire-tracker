@@ -148,6 +148,8 @@ export async function updateOrder(id: string, body: unknown): Promise<OrderDto> 
   if (input.orderRef) await assertOrderRefIsFree(input.orderRef, id);
   await db.hireOrder.update({ where: { id }, data: input });
   if (input.orderRef) await relinkInvoices(order.supplier.id);
+  // R13 reads the order's damage waiver, so its invoices' findings change with it.
+  if (input.damageWaiverApplies !== undefined) await recheckRelatedInvoices({ orderIds: [id] });
   return getOrder(id);
 }
 
