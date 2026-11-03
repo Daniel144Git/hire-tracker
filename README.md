@@ -26,7 +26,7 @@ All data shown is the fictional demo data. More pages: [an invoice with its find
 | ------ | ---------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Static | TypeScript (strict), ESLint, Prettier    | every file      | Types across the app, the API schemas (Zod) and the database client (Prisma); lint and formatting                                                          |
 | Unit   | Vitest                                   | 426 in 49 files | The business logic, with no database: the charge calculator, each reconciliation rule R1–R17, the PDF templates, money and VAT, allocation, the exports    |
-| API    | Playwright (`request`)                   | 157 in 19 files | Every endpoint against the production build: status codes, validation errors, the checks firing end to end, and a test that the demo data trips every rule |
+| API    | Playwright (`request`)                   | 158 in 19 files | Every endpoint against the production build: status codes, validation errors, the checks firing end to end, and a test that the demo data trips every rule |
 | E2E    | Playwright (Chromium), Page Object Model | 64 in 15 files  | The critical user flows: enter or upload an invoice, see its findings, the reports, filters, statements; axe accessibility scans in light and dark mode    |
 
 How the tests are built:
@@ -222,7 +222,7 @@ Endpoints take and return JSON, except that a PDF is sent as a multipart form an
 | `GET, PATCH /api/sites/:id`                                                            | Get or edit a site                                                                                                       | 400, 404, 409                 |
 | `GET /api/orders?siteId=&status=`                                                      | List hire orders, filtered by site and status                                                                            | 400                           |
 | `POST /api/orders`                                                                     | Create a hire order with its items                                                                                       | 400, 409 duplicate job number |
-| `GET, PATCH /api/orders/:id`                                                           | Get an order, or change its trade or damage waiver                                                                       | 400, 404                      |
+| `GET, PATCH /api/orders/:id`                                                           | Get an order, or change its trade or damage waiver (its invoices are re-checked)                                         | 400, 404                      |
 | `POST /api/orders/:id/items`                                                           | Add an item or accessory to an order                                                                                     | 400, 404                      |
 | `POST /api/orders/:id/off-hire`                                                        | Off-hire: date and optional collection number                                                                            | 400, 404, 409 not on hire     |
 | `POST /api/orders/:id/collection`                                                      | Record the collection of an off-hired order                                                                              | 400, 404, 409 not off-hired   |
